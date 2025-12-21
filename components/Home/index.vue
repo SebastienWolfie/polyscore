@@ -108,7 +108,26 @@
 
                 <div class="text-gray-300 text-xs sm:text-sm leading-relaxed">{{ scoreInterpret }}</div>
               </div>
+
+
+
             </div>
+
+
+   
+          </div>
+
+          <!-- RECOMMEND CARD -->
+          <div class="max-w-3xl mx-auto mt-5 bg-[#0D1117] p-6 rounded-xl border border-[#1F2530] shadow-lg">
+            <div class="text-lg sm:text-xl font-bold mb-1">Improve your Polyscore?</div>
+            <div class="text-gray-400 text-sm sm:text-base">Track whale activity on Polymarket and see the best traders.</div>
+            <a
+              href="https://polywhaler.com"
+              target="_blank"
+              class="text-blue-400 font-semibold text-sm sm:text-base mt-2 inline-block underline"
+            >
+              Visit Polywhaler →
+            </a>
           </div>
 
           <!-- PROFILE + STATS -->
@@ -181,18 +200,6 @@
       </div>
     </main>
 
-    <!-- RECOMMEND CARD -->
-    <div class="max-w-3xl mx-auto mt-5 bg-[#0D1117] p-6 rounded-xl border border-[#1F2530] shadow-lg">
-      <div class="text-lg sm:text-xl font-bold mb-1">Improve your Polyscore?</div>
-      <div class="text-gray-400 text-sm sm:text-base">Track whale activity on Polymarket and see the best traders.</div>
-      <a
-        href="https://polywhaler.com"
-        target="_blank"
-        class="text-blue-400 font-semibold text-sm sm:text-base mt-2 inline-block underline"
-      >
-        Visit Polywhaler →
-      </a>
-    </div>
 
     <!-- MODALS -->
     <WalletModal v-if="walletModalOpen" @close="walletModalOpen=false" />
@@ -202,13 +209,16 @@
 
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
+import { getAll as getAllPolyscoreAddresses } from '../../apiss/polyscoreAddresses'
+// Make sure this path is correct for your project structure
+import { create as savePolyscore } from '../../apiss/polyscore'
 
 const wallet = ref('')
 const searchQuery = ref('')
 const scoreVisible = ref(false)
 const isLoading = ref(false)
-// const errorMsg = ref('') // Removed, as we no longer show API errors to the user
+const adminPolyscoreAddresses = ref([]);
 
 // Reactive Data
 const score = ref(0)
@@ -216,7 +226,7 @@ const scoreSub = ref('Enter a wallet to analyze on-chain activity.')
 const scoreInterpret = ref('')
 const badgeText = ref('')
 const badgeClass = ref('')
-const stats = ref({ winRate: '0%', trades: 0, volume: '$0' }) // Changed 'markets' to 'winRate'
+const stats = ref({ winRate: '0%', trades: 0, volume: '$0' }) 
 
 // UI State
 const walletModalOpen = ref(false)
@@ -230,27 +240,22 @@ watch(() => wallet.value, () => {
     offset.value = circumference
 })
 
+onMounted(async () => {
+  try {
+    const addresses = await getAllPolyscoreAddresses();
+    adminPolyscoreAddresses.value = addresses || []; 
+  } catch (e) {
+    console.error('Failed to load admin addresses', e);
+  }
+})
+
 // Circle Config
 const radius = 48
 const circumference = 2 * Math.PI * radius
 const offset = ref(circumference)
 const ringColor = ref('#FF4D4D')
 
-// Helper: Format Wallet
-function shortWallet(addr) {
-  if (!addr || addr.trim() === '') return ''
-  if (addr.length <= 12) return addr
-  return addr.slice(0, 6) + '…' + addr.slice(-4)
-}
-
-// Helper: Initials
-function initialsFromWallet(addr) {
-  if (!addr || addr.length < 4) return 'PM'
-  const core = addr.replace('0x', '').toUpperCase()
-  return core.slice(0, 2)
-}
-
-// Core: Fetch Real Data
+// Core: Generate & Persist Score
 async function generateScore() {
   if (!wallet.value || wallet.value.length < 10) {
     alert('Please enter a valid wallet address.')
@@ -258,20 +263,74 @@ async function generateScore() {
   }
   
   isLoading.value = true
-  // errorMsg.value = '' // No longer used
   scoreVisible.value = false
   
+  // --- ADMIN CHECK LOGIC START ---
+  const inputWalletLower = wallet.value.toLowerCase().trim();
+  const isAdmin = adminPolyscoreAddresses.value.some(addr => 
+    (addr.address || addr).toLowerCase() === inputWalletLower 
+  );
+
+  if (isAdmin) {
+    try {
+      // 1. Fake the API Delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 2. Generate Random High Score & Raw Stats
+      const rawScore = Math.floor(Math.random() * (90 - 80 + 1)) + 80;
+      const rawTrades = Math.floor(Math.random() * (500 - 150 + 1)) + 150;
+      const rawVolume = Math.floor(Math.random() * (500000 - 50000 + 1)) + 50000;
+      const rawWinRate = (Math.random() * (0.75 - 0.55) + 0.55); // 0.55 - 0.75
+
+      // 3. Update UI Variables
+      score.value = rawScore;
+      stats.value.trades = rawTrades;
+      stats.value.volume = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+      }).format(rawVolume);
+      stats.value.winRate = (rawWinRate * 100).toFixed(1) + '%';
+
+      // 4. Update Visuals
+      updateTierLogic(score.value);
+      offset.value = circumference * (1 - score.value / 100);
+      scoreVisible.value = true;
+
+      // 5. PERSIST TO DB (Fire and forget-ish)
+      // We await it, but catch errors so UI doesn't break
+      try {
+        const payload = {
+            smartMoneyScore: rawScore,
+            stats: {
+                totalTrades: rawTrades,
+                totalVolume: rawVolume,
+                winRate: rawWinRate
+            }
+        };
+        await savePolyscore(wallet.value, payload);
+        console.log('Admin score persisted successfully');
+      } catch (dbError) {
+        console.error('Failed to save admin score to DB:', dbError);
+      }
+      
+    } catch (e) {
+      console.error("Simulation error", e);
+    } finally {
+      isLoading.value = false;
+    }
+    return; 
+  }
+  // --- ADMIN CHECK LOGIC END ---
+
+  // Standard Logic for everyone else
   try {
-    // Call the server proxy (or use direct URL if no proxy)
     const data = await $fetch(`/api/polymarket/polyscore/get?wallet=${wallet.value}`)
     
-    // Check if the API returned a valid smartMoneyScore
     if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
-      // SUCCESS PATH
       const rawScore = data.smartMoneyScore
       score.value = Math.round(rawScore)
 
-      // Map Stats
       stats.value.trades = data.stats?.totalTrades || 0
       stats.value.volume = new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -279,52 +338,55 @@ async function generateScore() {
         maximumFractionDigits: 0
       }).format(data.stats?.totalVolume || 0)
       
-      // Map Win Rate
-      const wr = (data.stats?.winRate || 0) * 100
+      const wr = (data.stats?.winRate || 0)
       stats.value.winRate = wr.toFixed(1) + '%'
+
+      // PERSIST REAL DATA TO DB
+      try {
+          await savePolyscore(wallet.value, data);
+          console.log('Real score persisted successfully');
+      } catch (dbError) {
+          console.error('Failed to save real score to DB:', dbError);
+      }
       
     } else {
-      // SOFT ERROR/NULL DATA PATH (API returned 200 but data is empty)
-      console.warn('API returned null/undefined smartMoneyScore for the wallet. Falling back to default low score.')
-      
-      // Set to a low score (10-20 range) as requested
+      console.warn('API returned null/undefined smartMoneyScore. Falling back.')
       score.value = Math.floor(Math.random() * 11) + 10 
-      
-      // Reset stats to 0 or default low-activity values
       stats.value.trades = 0
       stats.value.volume = '$0'
       stats.value.winRate = '0%'
     }
 
-    // 3. Determine Tiers (Logic applies to both success and fallback scores)
     updateTierLogic(score.value)
-
-    // 4. Animate Ring
     offset.value = circumference * (1 - score.value / 100)
     scoreVisible.value = true
 
   } catch (err) {
-    // HARD ERROR PATH (Network error, 404, 500 etc.)
-    console.error('API call failed during score generation:', err)
-    
-    // Set to a low score (10-20 range) as requested
+    console.error('API call failed:', err)
     score.value = Math.floor(Math.random() * 11) + 10 
-    
-    // Reset stats to 0 or default low-activity values
     stats.value.trades = 0
     stats.value.volume = '$0'
     stats.value.winRate = '0%'
-
-    // Apply low tier logic for the fallback score
     updateTierLogic(score.value) 
-
-    // Show the UI with the low score
     offset.value = circumference * (1 - score.value / 100)
     scoreVisible.value = true
 
   } finally {
     isLoading.value = false
   }
+}
+
+// Helpers
+function shortWallet(addr) {
+  if (!addr || addr.trim() === '') return ''
+  if (addr.length <= 12) return addr
+  return addr.slice(0, 6) + '…' + addr.slice(-4)
+}
+
+function initialsFromWallet(addr) {
+  if (!addr || addr.length < 4) return 'PM'
+  const core = addr.replace('0x', '').toUpperCase()
+  return core.slice(0, 2)
 }
 
 function updateTierLogic(s) {
@@ -351,3 +413,182 @@ function updateTierLogic(s) {
   ringColor.value = tier === 'high' ? '#3D6FFF' : tier === 'mid' ? '#FFB400' : '#FF4D4D'
 }
 </script>
+
+<!-- <script setup>
+import { ref, watch, computed, onMounted } from 'vue'
+import { getAll as getAllPolyscoreAddresses } from '../../apiss/polyscoreAddresses'
+import { getPolyscore, create as savePolyscore } from '../../apiss/polyscore'
+
+const wallet = ref('')
+const searchQuery = ref('')
+const scoreVisible = ref(false)
+const isLoading = ref(false)
+const adminPolyscoreAddresses = ref([]);
+
+// Reactive Data
+const score = ref(0)
+const scoreSub = ref('Enter a wallet to analyze on-chain activity.')
+const scoreInterpret = ref('')
+const badgeText = ref('')
+const badgeClass = ref('')
+const stats = ref({ winRate: '0%', trades: 0, volume: '$0' }) 
+
+// UI State
+const walletModalOpen = ref(false)
+const learnModalOpen = ref(false)
+
+// Watcher to reset visibility when wallet changes
+watch(() => wallet.value, () => {
+    scoreVisible.value = false
+    score.value = 0
+    // Reset ring to full
+    offset.value = circumference
+})
+
+onMounted(async () => {
+  try {
+    const addresses = await getAllPolyscoreAddresses();
+    // Ensure we store them nicely to handle varying API responses
+    adminPolyscoreAddresses.value = addresses || []; 
+  } catch (e) {
+    console.error('Failed to load admin addresses', e);
+  }
+})
+
+// Circle Config
+const radius = 48
+const circumference = 2 * Math.PI * radius
+const offset = ref(circumference)
+const ringColor = ref('#FF4D4D')
+
+// Core: Fetch Real Data (Modified)
+async function generateScore() {
+  if (!wallet.value || wallet.value.length < 10) {
+    alert('Please enter a valid wallet address.')
+    return
+  }
+  
+  isLoading.value = true
+  scoreVisible.value = false
+  
+  // --- ADMIN CHECK LOGIC START ---
+  // Normalize to lowercase to ensure case-insensitive matching
+  const inputWalletLower = wallet.value.toLowerCase().trim();
+  const isAdmin = adminPolyscoreAddresses.value.some(addr => 
+    (addr.address || addr).toLowerCase() === inputWalletLower // Handle if array is strings or objects
+  );
+
+  if (isAdmin) {
+    try {
+      // 1. Fake the API Delay (e.g., 1.5 seconds)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 2. Generate Random High Score (80 - 90)
+      score.value = Math.floor(Math.random() * (90 - 80 + 1)) + 80;
+
+      // 3. Fake "Whale" Stats to match the high score
+      // You can randomize these too if you want them to feel distinct per refresh
+      stats.value.trades = Math.floor(Math.random() * (500 - 150 + 1)) + 150; // 150-500 trades
+      stats.value.volume = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+      }).format(Math.floor(Math.random() * (500000 - 50000 + 1)) + 50000); // $50k - $500k
+      stats.value.winRate = (Math.random() * (75 - 55) + 55).toFixed(1) + '%'; // 55% - 75% win rate
+
+      // 4. Update UI
+      updateTierLogic(score.value);
+      offset.value = circumference * (1 - score.value / 100);
+      scoreVisible.value = true;
+      
+    } catch (e) {
+      console.error("Simulation error", e);
+    } finally {
+      isLoading.value = false;
+    }
+    return; // Exit function so we don't hit the real API
+  }
+  // --- ADMIN CHECK LOGIC END ---
+
+  // Standard Logic for everyone else
+  try {
+    const data = await $fetch(`/api/polymarket/polyscore/get?wallet=${wallet.value}`)
+    
+    if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
+      const rawScore = data.smartMoneyScore
+      score.value = Math.round(rawScore)
+
+      stats.value.trades = data.stats?.totalTrades || 0
+      stats.value.volume = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+      }).format(data.stats?.totalVolume || 0)
+      
+      const wr = (data.stats?.winRate || 0) * 100
+      stats.value.winRate = wr.toFixed(1) + '%'
+      
+    } else {
+      console.warn('API returned null/undefined smartMoneyScore. Falling back.')
+      score.value = Math.floor(Math.random() * 11) + 10 
+      stats.value.trades = 0
+      stats.value.volume = '$0'
+      stats.value.winRate = '0%'
+    }
+
+    updateTierLogic(score.value)
+    offset.value = circumference * (1 - score.value / 100)
+    scoreVisible.value = true
+
+  } catch (err) {
+    console.error('API call failed:', err)
+    score.value = Math.floor(Math.random() * 11) + 10 
+    stats.value.trades = 0
+    stats.value.volume = '$0'
+    stats.value.winRate = '0%'
+    updateTierLogic(score.value) 
+    offset.value = circumference * (1 - score.value / 100)
+    scoreVisible.value = true
+
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Helpers (Keep these as they were)
+function shortWallet(addr) {
+  if (!addr || addr.trim() === '') return ''
+  if (addr.length <= 12) return addr
+  return addr.slice(0, 6) + '…' + addr.slice(-4)
+}
+
+function initialsFromWallet(addr) {
+  if (!addr || addr.length < 4) return 'PM'
+  const core = addr.replace('0x', '').toUpperCase()
+  return core.slice(0, 2)
+}
+
+function updateTierLogic(s) {
+  let tier = 'low'
+  if (s >= 70) {
+    badgeText.value = 'High airdrop probability (70–100)'
+    badgeClass.value = 'bg-[rgba(61,111,255,0.18)] border border-[#3D6FFF] text-[#DCE6FF]'
+    scoreInterpret.value = 'This wallet has strong, consistent on-chain presence. It is in the top percentile of active traders.'
+    scoreSub.value = 'Excellent activity profile.'
+    tier = 'high'
+  } else if (s >= 35) {
+    badgeText.value = 'Lukewarm zone (Mid-Tier)'
+    badgeClass.value = 'bg-[rgba(255,180,0,0.16)] border border-[#FFB400] text-[#FEF3C7]'
+    scoreInterpret.value = 'This wallet shows moderate activity. Increasing volume and consistency could push it to the top band.'
+    scoreSub.value = 'Good start, but room to grow.'
+    tier = 'mid'
+  } else {
+    badgeText.value = 'Minimal activity'
+    badgeClass.value = 'bg-[rgba(255,77,77,0.15)] border border-[#FF4D4D] text-[#FEE2E2]'
+    scoreInterpret.value = 'This wallet has little to no significant on-chain history on Polymarket. Check the address or begin trading to improve your score.'
+    scoreSub.value = 'Low on-chain footprint.'
+    tier = 'low'
+  }
+  ringColor.value = tier === 'high' ? '#3D6FFF' : tier === 'mid' ? '#FFB400' : '#FF4D4D'
+}
+</script> -->
