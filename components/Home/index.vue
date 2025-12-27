@@ -122,7 +122,7 @@
             <div class="text-lg sm:text-xl font-bold mb-1">Improve your Polyscore?</div>
             <div class="text-gray-400 text-sm sm:text-base">Check your metric through full on-chain report and track whale activity on polymarket from the best traders.</div>
             <a
-              href="https://polywhaler.com"
+              href="https://www.polywhaler.net/"
               target="_blank"
               class="text-blue-400 font-semibold text-sm sm:text-base mt-2 inline-block underline"
             >
