@@ -2,7 +2,7 @@
   <div class="bg-[#0A0C10] text-white min-h-screen font-sans">
     <!-- NAVBAR -->
     <header
-      class="flex flex-col sm:flex-row items-start sm:items-center p-4 sm:p-6 bg-[#0D1117] border-b border-[#1F2530] gap-3 sm:gap-5 sticky top-0 z-10"
+      class="flex flex-col sm:flex-row items-start justify-between sm:items-center p-4 sm:p-6 bg-[#0D1117] border-b border-[#1F2530] gap-3 sm:gap-5 sticky top-0 z-10"
     >
       <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
         <div class="text-blue-400 font-bold text-lg sm:text-xl">Polyscore <span class="text-base sm:text-sm">🇺🇸</span></div>
@@ -13,7 +13,35 @@
         placeholder="Search markets..."
         class="mt-2 sm:mt-0 sm:ml-auto w-full sm:w-auto flex-1 bg-[#11151D] border border-[#1F2530] rounded-full px-4 py-2 text-gray-300 text-sm placeholder-gray-500"
       /> -->
+
+      <p class="text-blue-400 cursor-pointer" @click="() => learnModalOpen=true">Learn more</p>
     </header>
+
+
+    <!-- OFFICIAL POLYMARKET PARTNER STRIP -->
+    <a
+      href="https://polymarket.com"
+      target="_blank"
+      class="block bg-gradient-to-r from-[#0B1324] to-[#0D1B3A] border-b border-[#1F2530] hover:from-[#0E1A3C] hover:to-[#142966] transition"
+    >
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="/images/polymarket-logo.svg" class="w-7 h-7" alt="Polymarket" />
+          <div>
+            <div class="text-sm font-semibold text-[#CBD4FF]">
+              Built on Polymarket data
+            </div>
+            <div class="text-xs text-gray-400">
+              Trade real prediction markets on the official Polymarket platform
+            </div>
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-semibold text-[#7BA7FF]">
+          Visit Polymarket →
+        </div>
+      </div>
+    </a>
+
 
     <!-- MAIN WRAPPER -->
     <main class="flex justify-center p-4 sm:p-6">
@@ -43,7 +71,7 @@
         <div class="bg-[#0D1117] p-5 rounded-2xl border border-[#1F2530] shadow-xl">
           <div class="flex justify-between items-center mb-4">
             <div class="text-sm font-semibold text-[#CBD4FF]">
-              🐋 Top Polymarket Whales — Last 90 Days
+              🐋 Top Polymarket Scorers — Last 90 Days
             </div>
             <div class="text-xs text-gray-500">Updated every 24h</div>
           </div>
@@ -88,7 +116,17 @@
               </div>
             </div>
           </div>
+
+          <a
+            href="https://www.polywhaler.net/"
+            target="_blank"
+            class="text-blue-400 font-semibold text-[14px] sm:text-base mt-2 inline-block underline"
+          >
+            See full list →
+          </a>
+            
         </div>
+
 
 
 
@@ -268,9 +306,6 @@
             </div>
           </div>
 
-          <div class="text-center mt-4 border-t border-dashed border-gray-500 pt-2 text-xs sm:text-sm text-gray-400">
-            Polyscore is experimental and unofficial. <span class="text-blue-400 font-semibold">Powered by Polymarket</span> ecosystem data.
-          </div>
         </div>
       </div>
     </main>
@@ -293,15 +328,18 @@ const scoreVisible = ref(false)
 const isLoading = ref(false)
 const adminPolyscoreAddresses = ref([]);
 
+
+// 1. CONFIGURATION
+const TOTAL_TRACKED_BASE_VALUE = 248137; // The number on your launch date
+const TOTAL_TRACKED_GROWTH_RATE_PER_SEC = 0.01; // Adjust this to speed up/slow down growth
+const totalTracked = ref(TOTAL_TRACKED_BASE_VALUE)
+
+
+
 const worldwideRank = ref(null)
-const totalTracked = ref(248137)
 const percentile = ref(null)
 
-const whaleBenchmarks = ref([
-  { name: '0xF9A3…B3D2', score: 98, volume: '$2.3M', winRate: '78%', trades: 3120 },
-  { name: '0x2B91…D771', score: 96, volume: '$1.8M', winRate: '74%', trades: 2410 },
-  { name: '0xA8E4…921F', score: 94, volume: '$1.2M', winRate: '71%', trades: 1893 }
-])
+const whaleBenchmarks = ref([])
 
 
 
@@ -326,6 +364,7 @@ watch(() => wallet.value, () => {
 })
 
 onMounted(async () => {
+updateWhaleBenchmarks();
   try {
     const addresses = await getAllPolyscoreAddresses();
     adminPolyscoreAddresses.value = addresses || []; 
@@ -333,6 +372,79 @@ onMounted(async () => {
     console.error('Failed to load admin addresses', e);
   }
 })
+
+// --- DYNAMIC BENCHMARK LOGIC ---
+
+/**
+ * Generates a consistent "random" number (0 to 1) based on a seed.
+ * This ensures every user sees the same data for the 48h period.
+ */
+function seededRandom(seed) {
+  const m = 0x80000000;
+  const a = 1103515245;
+  const c = 12345;
+  let state = seed ? seed : Math.floor(Math.random() * (m - 1));
+  return function() {
+    state = (a * state + c) % m;
+    return state / (m - 1);
+  }
+}
+
+/**
+ * Regenerates the top 5 list based on the current 48-hour epoch.
+ */
+function updateWhaleBenchmarks() {
+  // Define 48 Hours in Milliseconds
+  const EPOCH_DURATION = 48 * 60 * 60 * 1000;
+  // Calculate which "48h block" we are in (e.g., Block #5021)
+  const currentEpoch = Math.floor(window.Date.now() / EPOCH_DURATION);
+
+  // Initialize the Random Generator with the Epoch as the seed
+  const rng = seededRandom(currentEpoch);
+
+  const newBenchmarks = [];
+  const chars = '0123456789ABCDEF';
+
+  for (let i = 0; i < 5; i++) {
+    // 1. Generate Realistic Wallet Address (0x + 4 chars + ... + 4 chars)
+    let start = '';
+    let end = '';
+    for(let j=0; j<4; j++) start += chars[Math.floor(rng() * 16)];
+    for(let j=0; j<4; j++) end += chars[Math.floor(rng() * 16)];
+
+    // 2. Score: Rank 1 is 98-99, others descend slightly
+    // Creates a tight spread at the top (e.g., 99, 98, 97, 96, 95)
+    const score = Math.floor(99 - i - (rng() * 1.2));
+
+    // 3. Volume: Correlates loosely with rank ($500k to $3.5M)
+    const volBase = (6 - i) * 400000; 
+    const volNoise = rng() * 800000;
+    const totalVol = volBase + volNoise;
+    
+    let volStr;
+    if (totalVol > 1000000) {
+        volStr = '$' + (totalVol / 1000000).toFixed(1) + 'M';
+    } else {
+        volStr = '$' + Math.floor(totalVol / 1000) + 'K';
+    }
+
+    // 4. Win Rate: High tiers usually have 65% - 88%
+    const winRate = Math.floor(68 + (rng() * 20)) + '%';
+
+    // 5. Trades: 600 - 3500
+    const trades = Math.floor(600 + (rng() * 2900));
+
+    newBenchmarks.push({
+      name: `0x${start}…${end}`,
+      score: score,
+      volume: volStr,
+      winRate: winRate,
+      trades: trades
+    });
+  }
+
+  whaleBenchmarks.value = newBenchmarks;
+}
 
 // Circle Config
 const radius = 48
@@ -515,5 +627,34 @@ function calculateRank(score) {
   worldwideRank.value = base + noise
   percentile.value = ((1 - worldwideRank.value / max) * 100).toFixed(2)
 }
+
+
+
+
+let timer = null;
+
+const calculateTotal = () => {
+  const now = window.Date.now();
+  const TOTAL_TRACKED_START_DATE = new window.Date('2025-12-01T00:00:00').getTime(); // Your "Epoch"
+  const elapsedSeconds = Math.floor((now - TOTAL_TRACKED_START_DATE) / 1000);
+  
+  // The magic formula: Base + (Seconds passed * Growth rate)
+  // This ensures the number is ALWAYS consistent with the clock
+  return TOTAL_TRACKED_BASE_VALUE + Math.floor(elapsedSeconds * TOTAL_TRACKED_GROWTH_RATE_PER_SEC);
+};
+
+onMounted(() => {
+  // Initial calculation
+  totalTracked.value = calculateTotal();
+
+  // Update every second to keep it "live"
+  timer = setInterval(() => {
+    totalTracked.value = calculateTotal();
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer);
+});
 
 </script>
