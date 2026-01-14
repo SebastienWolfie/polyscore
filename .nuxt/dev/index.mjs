@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { parentPort, threadId } from 'node:worker_threads';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, isEvent, createEvent, fetchWithEvent, getRequestHeader, eventHandler, setHeaders, sendRedirect, proxyRequest, createError, setResponseHeader, send, getResponseStatus, setResponseStatus, setResponseHeaders, getRequestHeaders, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getRouterParam, getQuery as getQuery$1, readBody, getResponseStatusText } from 'file:///Users/icon/ico/polyscore/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, isEvent, createEvent, fetchWithEvent, getRequestHeader, eventHandler, setHeaders, sendRedirect, proxyRequest, createError, setResponseHeader, send, getResponseStatus, setResponseStatus, setResponseHeaders, getRequestHeaders, setHeader, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getRouterParam, getQuery as getQuery$1, readBody, getResponseStatusText } from 'file:///Users/icon/ico/polyscore/node_modules/h3/dist/index.mjs';
 import jwt from 'file:///Users/icon/ico/polyscore/node_modules/jsonwebtoken/index.js';
 import * as nodemailer from 'file:///Users/icon/ico/polyscore/node_modules/nodemailer/lib/nodemailer.js';
 import { getRequestDependencies, getPreloadLinks, getPrefetchLinks, createRenderer } from 'file:///Users/icon/ico/polyscore/node_modules/vue-bundle-renderer/dist/runtime.mjs';
@@ -830,12 +830,24 @@ const errorHandler = (async function errorhandler(error, event) {
   return send(event, html);
 });
 
+const _UJcvcf = defineEventHandler((event) => {
+  setHeader(event, "Access-Control-Allow-Origin", "*");
+  setHeader(event, "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  setHeader(event, "Access-Control-Allow-Headers", "Content-Type, Authorization");
+  setHeader(event, "Access-Control-Allow-Credentials", "true");
+  if (event.node.req.method === "OPTIONS") {
+    event.node.res.statusCode = 200;
+    event.node.res.end();
+  }
+});
+
 const _lazy_ZMEnyd = () => Promise.resolve().then(function () { return confirmVerification_post$1; });
 const _lazy_AcPynr = () => Promise.resolve().then(function () { return sendVerification_post$1; });
 const _lazy_0eTImd = () => Promise.resolve().then(function () { return get$1; });
 const _lazy_VcPPEC = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
+  { route: '', handler: _UJcvcf, lazy: false, middleware: true, method: undefined },
   { route: '/api/email/auth/confirm-verification', handler: _lazy_ZMEnyd, lazy: true, middleware: false, method: "post" },
   { route: '/api/email/auth/send-verification', handler: _lazy_AcPynr, lazy: true, middleware: false, method: "post" },
   { route: '/api/polymarket/polyscore/get', handler: _lazy_0eTImd, lazy: true, middleware: false, method: undefined },
