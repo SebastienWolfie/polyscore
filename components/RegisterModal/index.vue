@@ -198,8 +198,16 @@ async function connectClicked() {
 }
 
 
+onMounted(() => {
+  validateWalletConnect()
+})
+
 watch(() => auth.value.walletAddress, async() => {
-    if (!auth.value.walletAddress) return;
+    validateWalletConnect()
+})
+
+async function validateWalletConnect() {
+  if (!auth.value.walletAddress) return;
 
     connectLoading.value = true;
     auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
@@ -222,9 +230,7 @@ watch(() => auth.value.walletAddress, async() => {
         return;
     }
     showLoginButton.value = true
-
-    // showLoadingModal.value = true;
-})
+}
 
     // onMounted(() => {
 

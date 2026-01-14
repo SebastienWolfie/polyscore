@@ -144,7 +144,7 @@ const handleSubmit = async () => {
       auth.value.unverifiedUser = result
       return navigateTo("/verify-required")
     }
-    
+
     emit('onClose')
     loading.value = false
   } catch (err) {
@@ -169,44 +169,41 @@ const handleSubmit = async () => {
 }
 
 
+onMounted(() => {
+  validateWalletConnect()
+})
+
 
 
 watch(() => auth.value.walletAddress, async() => {
-        if (!auth.value.walletAddress) return;
+    validateWalletConnect()
+})
 
-        connectLoading.value = true;
-        auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
-        
+async function validateWalletConnect() {
+  if (!auth.value.walletAddress) return;
 
-        if (!auth.value.isWalletConnected) {
-            openModal()
-            return;
-        }
+  connectLoading.value = true;
+  auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
+  
 
-
-        if (getChainID() != 137){
-            if (window.ethereum) await switchNetwork(137);
-            else {
-                await disconnectWallet();
-                auth.value.isWalletConnected = false;
-                auth.value.walletAddress = "";
-                alert("Switch to Polygon Mainnet Network");  
-            }
-            return;
-        }
-        showLoginButton.value = true;
-    })
-
-    // onMounted(() => {
-
-    //         disconnectWallet()
-    //         auth.value.addressSignature = null
-    //         auth.value.walletAddress = ''
-    //         auth.value.isWalletConnected = false
-    //         showLoginButton.value = false;
-    // })
+  if (!auth.value.isWalletConnected) {
+      openModal()
+      return;
+  }
 
 
-
+  if (getChainID() != 137){
+      if (window.ethereum) await switchNetwork(137);
+      else {
+          await disconnectWallet();
+          auth.value.isWalletConnected = false;
+          auth.value.walletAddress = "";
+          alert("Switch to Polygon Mainnet Network");  
+      }
+      return;
+  }
+  console.log('jfnjgn')
+  showLoginButton.value = true;
+}
 
 </script>
