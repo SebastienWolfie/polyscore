@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     // 2. Create the Verification Link
     // CHANGE THIS to your real domain in production
     const baseUrl = 'https://morkie.web.app/'; 
-    const verificationLink = `${baseUrl}/verify/${token}`;
+    const verificationLink = `${baseUrl}/verify/${token}/polyscore`;
 
     // 3. Configure Transporter
     let transporter = nodemailer.createTransport({

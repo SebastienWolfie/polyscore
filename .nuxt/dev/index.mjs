@@ -1083,7 +1083,7 @@ const sendVerification_post = defineEventHandler(async (event) => {
       { expiresIn: "24h" }
     );
     const baseUrl = "https://morkie.web.app/";
-    const verificationLink = `${baseUrl}/verify/${token}`;
+    const verificationLink = `${baseUrl}/verify/${token}/polyscore`;
     let transporter = nodemailer.createTransport({
       host: "mail.privateemail.com",
       port: 465,

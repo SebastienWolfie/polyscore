@@ -202,7 +202,7 @@ async function validateWalletConnect() {
       }
       return;
   }
-  console.log('jfnjgn')
+  
   showLoginButton.value = true;
 }
 
