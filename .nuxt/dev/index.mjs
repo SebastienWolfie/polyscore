@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { parentPort, threadId } from 'node:worker_threads';
 import { defineEventHandler, handleCacheHeaders, splitCookiesString, isEvent, createEvent, fetchWithEvent, getRequestHeader, eventHandler, setHeaders, sendRedirect, proxyRequest, createError, setResponseHeader, send, getResponseStatus, setResponseStatus, setResponseHeaders, getRequestHeaders, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getRouterParam, getQuery as getQuery$1, readBody, getResponseStatusText } from 'file:///Users/icon/ico/polyscore/node_modules/h3/dist/index.mjs';
+import jwt from 'file:///Users/icon/ico/polyscore/node_modules/jsonwebtoken/index.js';
+import * as nodemailer from 'file:///Users/icon/ico/polyscore/node_modules/nodemailer/lib/nodemailer.js';
 import { getRequestDependencies, getPreloadLinks, getPrefetchLinks, createRenderer } from 'file:///Users/icon/ico/polyscore/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { stringify, uneval } from 'file:///Users/icon/ico/polyscore/node_modules/devalue/index.js';
 import destr from 'file:///Users/icon/ico/polyscore/node_modules/destr/dist/index.mjs';
@@ -828,10 +830,14 @@ const errorHandler = (async function errorhandler(error, event) {
   return send(event, html);
 });
 
+const _lazy_ZMEnyd = () => Promise.resolve().then(function () { return confirmVerification_post$1; });
+const _lazy_AcPynr = () => Promise.resolve().then(function () { return sendVerification_post$1; });
 const _lazy_0eTImd = () => Promise.resolve().then(function () { return get$1; });
 const _lazy_VcPPEC = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
+  { route: '/api/email/auth/confirm-verification', handler: _lazy_ZMEnyd, lazy: true, middleware: false, method: "post" },
+  { route: '/api/email/auth/send-verification', handler: _lazy_AcPynr, lazy: true, middleware: false, method: "post" },
   { route: '/api/polymarket/polyscore/get', handler: _lazy_0eTImd, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_error', handler: _lazy_VcPPEC, lazy: true, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_VcPPEC, lazy: true, middleware: false, method: undefined }
@@ -1042,6 +1048,161 @@ const template$1 = _template;
 const errorDev = /*#__PURE__*/Object.freeze({
   __proto__: null,
   template: template$1
+});
+
+const JWT_SECRET$1 = process.env.JWT_SECRET || "ghvbjhhbjhbjbyuybubybyytvvtvgvyvbubhubyvtuiuh78g87gyububyubbuyvtvvytvuyvyg78gy";
+const confirmVerification_post = defineEventHandler(async (event) => {
+  if (event.node.req.method === "OPTIONS") {
+    return "";
+  }
+  const { token } = await readBody(event);
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET$1);
+    return { success: true, ...decoded };
+  } catch (err) {
+    throw createError({ statusCode: 401, message: "Invalid or expired token" });
+  }
+});
+
+const confirmVerification_post$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: confirmVerification_post
+});
+
+const JWT_SECRET = "ghvbjhhbjhbjbyuybubybyytvvtvgvyvbubhubyvtuiuh78g87gyububyubbuyvtvvytvuyvyg78gy";
+const sendVerification_post = defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event);
+    const { id, email, walletAddress, username } = body;
+    if (!id, !email || !walletAddress) {
+      throw createError({ statusCode: 400, message: "Missing id, email or wallet address" });
+    }
+    const token = jwt.sign(
+      { id, email, walletAddress, from: "polyscore", type: "email_verification" },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+    const baseUrl = "https://morkie.web.app/";
+    const verificationLink = `${baseUrl}/verify/${token}`;
+    let transporter = nodemailer.createTransport({
+      host: "mail.privateemail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "info@polywhaler.net",
+        // Replace with your actual email
+        pass: "$Wolfie@420"
+        // Replace with env variable in prod
+      }
+    });
+    const mail_configs = {
+      from: '"Polyscore Security" <info@polywhaler.net>',
+      to: email,
+      subject: "Verify your Polyscore Account",
+      html: `
+        <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verify Your Wallet \u2014 Polyscore</title>
+</head>
+
+<body style="margin:0;padding:0;background:#000;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="100%" style="max-width:640px;background:#05070c;border-radius:20px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 0 60px rgba(99,102,241,0.25);overflow:hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding:28px 32px;background:linear-gradient(135deg,#6366f1,#a855f7);">
+              <div style="font-size:26px;font-weight:900;letter-spacing:0.4px;color:white;">
+                Polyscore
+              </div>
+              <div style="font-size:13px;color:#e0e7ff;margin-top:4px;">
+                Polymarket Whale Intelligence
+              </div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 32px;">
+              <h2 style="margin:0 0 12px;font-size:22px;color:white;">
+                Welcome, ${username} \u{1F44B}
+              </h2>
+
+              <p style="margin:0 0 16px;color:#9ca3af;font-size:14px;line-height:1.6;">
+                You\u2019re about to unlock real-time whale tracking, $10k+ trade alerts, and AI-powered market sentiment analysis.
+              </p>
+
+              <!-- Wallet Card -->
+              <div style="background:#000;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;margin:18px 0;">
+                <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+                  Wallet Address
+                </div>
+                <div style="font-size:13px;font-weight:700;color:#818cf8;word-break:break-all;">
+                  ${walletAddress}
+                </div>
+              </div>
+
+              <p style="color:#9ca3af;font-size:13px;">
+                Click below to confirm your wallet and activate:
+              </p>
+
+              <ul style="padding-left:18px;color:#9ca3af;font-size:13px;line-height:1.6;">
+                <li>Live whale monitoring</li>
+                <li>Private trader scoring</li>
+                <li>Insider activity detection</li>
+              </ul>
+
+              <!-- CTA -->
+              <div style="text-align:center;margin:32px 0 22px;">
+                <a href="${verificationLink}"
+                   style="display:inline-block;padding:15px 40px;border-radius:14px;background:linear-gradient(90deg,#6366f1,#a855f7);color:white;font-weight:800;text-decoration:none;font-size:14px;box-shadow:0 0 25px rgba(168,85,247,0.6);">
+                  Verify Wallet \u2192
+                </a>
+              </div>
+
+              <div style="font-size:12px;color:#6b7280;text-align:center;">
+                Link expires in <strong>24 hours</strong>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px;border-top:1px solid rgba(255,255,255,0.06);background:#020308;">
+              <div style="font-size:11px;color:#6b7280;line-height:1.6;">
+                If you did not create a Polyscore account, ignore this email.  
+                We never request private keys or transaction approvals.
+              </div>
+
+              <div style="margin-top:12px;font-size:10px;color:#374151;">
+                \xA9 2025 Polyscore \xB7 Advanced Polymarket Intelligence
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+    };
+    await transporter.sendMail(mail_configs);
+    return { success: true, message: "Verification email sent" };
+  } catch (err) {
+    console.error("Email Error:", err);
+    throw createError({ statusCode: 500, message: err.message });
+  }
+});
+
+const sendVerification_post$1 = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  default: sendVerification_post
 });
 
 const get = defineEventHandler(async (event) => {

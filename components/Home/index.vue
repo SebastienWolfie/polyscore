@@ -14,7 +14,23 @@
         class="mt-2 sm:mt-0 sm:ml-auto w-full sm:w-auto flex-1 bg-[#11151D] border border-[#1F2530] rounded-full px-4 py-2 text-gray-300 text-sm placeholder-gray-500"
       /> -->
 
-      <p class="text-blue-400 cursor-pointer" @click="() => learnModalOpen=true">Learn more</p>
+
+      <!-- <p class="text-blue-400 cursor-pointer" @click="() => learnModalOpen=true">Learn more</p> -->
+
+      <div v-if="!user" class="flex gap-3">
+        <button @click="showLogin=true" class="text-xs px-3 py-1 rounded-full border border-[#3D6FFF] text-[#7BA7FF]">
+          Sign In
+        </button>
+        <button @click="showSignup=true" class="text-xs px-3 py-1 rounded-full bg-[#3D6FFF] text-white">
+          Sign Up
+        </button>
+      </div>
+
+      <div v-else class="flex items-center gap-3 text-xs text-gray-400">
+        <span>{{ user.email }}</span>
+        <button @click="logout" class="text-red-400">Logout</button>
+      </div>
+
     </header>
 
 
@@ -168,6 +184,33 @@
           </div>
         </div>
 
+        <div class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mt-3">
+          <div class="text-gray-400 text-xs mb-1">DeFi Native Usage Score</div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-2xl font-bold text-[#7BA7FF] blur-sm select-none">
+              {{ defiScore }}/100
+            </div>
+
+            <div :class="['text-xs px-2 py-0.5 rounded-full font-semibold', defiGradeClass]">
+              {{ defiGrade }}
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-1">
+            Measures how deeply your wallet interacts with DeFi before using Polymarket.
+            Higher DeFi scores significantly boost your PolyScore.
+          </p>
+        </div>
+
+        <div class="text-xs text-gray-500 mt-1">
+          Your DeFi Native Usage Score tracks how much real DeFi capital you move
+          before trading prediction markets.  
+          <span class="text-blue-400">High DeFi scores boost PolyScore significantly.</span>
+        </div>
+
+
+
 
         <div v-if="scoreVisible" class="bg-gradient-to-r mt-3 from-[#3D6FFF] to-[#7BA7FF] p-3 rounded-xl text-black text-sm font-semibold shadow-lg">
           🔥 Wallet is outperforming {{ percentile }}% of all Polymarket traders.
@@ -291,7 +334,6 @@
           <!-- DETAILS -->
           <div
             class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 cursor-pointer"
-            @click="walletModalOpen = true"
           >
             <div class="text-xs sm:text-sm">
               <div>View detailed on-chain report</div>
@@ -312,8 +354,9 @@
 
 
     <!-- MODALS -->
-    <WalletModal v-if="walletModalOpen" @close="walletModalOpen=false" />
     <LearnModal v-if="learnModalOpen" @close="learnModalOpen=false" />
+    <RegisterModal v-if="showSignup" @onClose="showSignup=false"/>
+    <SignInModal v-if="showLogin" @onClose="showLogin=false"/>
   </div>
 </template>
 
@@ -327,6 +370,10 @@ const searchQuery = ref('')
 const scoreVisible = ref(false)
 const isLoading = ref(false)
 const adminPolyscoreAddresses = ref([]);
+
+const showLogin = ref(false)
+const showSignup = ref(false)
+
 
 
 // 1. CONFIGURATION
@@ -352,8 +399,36 @@ const badgeClass = ref('')
 const stats = ref({ winRate: '0%', trades: 0, volume: '$0' }) 
 
 // UI State
-const walletModalOpen = ref(false)
 const learnModalOpen = ref(false)
+
+
+const defiScore = ref(0)
+const defiGrade = ref('Poor')
+const defiGradeClass = ref('bg-red-500/20 text-red-400')
+
+function calculateDeFiScore(wallet) {
+  const isAdmin = adminPolyscoreAddresses.value.some(a =>
+    (a.address || a).toLowerCase() === wallet.toLowerCase()
+  )
+
+  if (isAdmin) {
+    defiScore.value = Math.floor(70 + Math.random() * 25)
+  } else {
+    defiScore.value = Math.floor(Math.random() * 30)
+  }
+
+  if (defiScore.value >= 70) {
+    defiGrade.value = 'Good'
+    defiGradeClass.value = 'bg-green-500/20 text-green-400'
+  } else if (defiScore.value >= 40) {
+    defiGrade.value = 'Average'
+    defiGradeClass.value = 'bg-yellow-500/20 text-yellow-400'
+  } else {
+    defiGrade.value = 'Poor'
+    defiGradeClass.value = 'bg-red-500/20 text-red-400'
+  }
+}
+
 
 // Watcher to reset visibility when wallet changes
 watch(() => wallet.value, () => {
@@ -468,6 +543,8 @@ async function generateScore() {
     (addr.address || addr).toLowerCase() === inputWalletLower 
   );
 
+  calculateDeFiScore(inputWalletLower)
+
   if (isAdmin) {
     try {
       // 1. Fake the API Delay
@@ -481,6 +558,13 @@ async function generateScore() {
 
       // 3. Update UI Variables
       score.value = rawScore;
+      const weightedScore = Math.round(
+        score.value * 0.6 +
+        defiScore.value * 0.4
+      )
+
+      score.value = weightedScore
+
       stats.value.trades = rawTrades;
       stats.value.volume = new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -530,6 +614,13 @@ async function generateScore() {
     if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
       const rawScore = data.smartMoneyScore
       score.value = Math.round(rawScore)
+      const weightedScore = Math.round(
+        score.value * 0.6 +
+        defiScore.value * 0.4
+      )
+
+      score.value = weightedScore
+
 
       stats.value.trades = data.stats?.totalTrades || 0
       stats.value.volume = new Intl.NumberFormat('en-US', {

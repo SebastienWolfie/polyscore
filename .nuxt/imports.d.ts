@@ -28,6 +28,7 @@ export { withCtx, withDirectives, withKeys, withMemo, withModifiers, withScopeId
 export { injectHead, useHead, useSeoMeta, useHeadSafe, useServerHead, useServerSeoMeta, useServerHeadSafe } from '@unhead/vue';
 export { default as eventBus } from '../composables/eventBus';
 export { useAuth, useAirdrops } from '../composables/states';
+export { useEmaiApi } from '../composables/useEmaiApi';
 export { default as Date } from '../utils/Date';
 export { getWindowDimensions } from '../utils/Dimensions';
 export { purifyNumber, purifyDecimal, onlyForCurrency, onlyForNumbers } from '../utils/DomPurify';

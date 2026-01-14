@@ -3,6 +3,12 @@ import type { Serialize, Simplify } from 'nitropack'
 declare module 'nitropack' {
   type Awaited<T> = T extends PromiseLike<infer U> ? Awaited<U> : T
   interface InternalApi {
+    '/api/email/auth/confirm-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/email/auth/confirm-verification.post').default>>>>
+    }
+    '/api/email/auth/send-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/email/auth/send-verification.post').default>>>>
+    }
     '/api/polymarket/polyscore/get': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/polymarket/polyscore/get').default>>>>
     }
