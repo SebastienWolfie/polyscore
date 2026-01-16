@@ -1,6 +1,7 @@
 
 interface _GlobalComponents {
-      'Home': typeof import("../components/Home/index.vue")['default']
+      'Header': typeof import("../components/Header/index.vue")['default']
+    'Home': typeof import("../components/Home/index.vue")['default']
     'LearnModal': typeof import("../components/LearnModal/index.vue")['default']
     'PolyDetailChart': typeof import("../components/PolyDetailChart/index.vue")['default']
     'RegisterModalLoading': typeof import("../components/RegisterModal/Loading.vue")['default']
@@ -29,7 +30,8 @@ interface _GlobalComponents {
     'Head': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Head']
     'Html': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Html']
     'Body': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
-      'LazyHome': typeof import("../components/Home/index.vue")['default']
+      'LazyHeader': typeof import("../components/Header/index.vue")['default']
+    'LazyHome': typeof import("../components/Home/index.vue")['default']
     'LazyLearnModal': typeof import("../components/LearnModal/index.vue")['default']
     'LazyPolyDetailChart': typeof import("../components/PolyDetailChart/index.vue")['default']
     'LazyRegisterModalLoading': typeof import("../components/RegisterModal/Loading.vue")['default']
@@ -72,6 +74,7 @@ declare module 'vue' {
   export interface GlobalComponents extends _GlobalComponents { }
 }
 
+export const Header: typeof import("../components/Header/index.vue")['default']
 export const Home: typeof import("../components/Home/index.vue")['default']
 export const LearnModal: typeof import("../components/LearnModal/index.vue")['default']
 export const PolyDetailChart: typeof import("../components/PolyDetailChart/index.vue")['default']
@@ -101,6 +104,7 @@ export const Style: typeof import("../node_modules/nuxt/dist/head/runtime/compon
 export const Head: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Head']
 export const Html: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Html']
 export const Body: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
+export const LazyHeader: typeof import("../components/Header/index.vue")['default']
 export const LazyHome: typeof import("../components/Home/index.vue")['default']
 export const LazyLearnModal: typeof import("../components/LearnModal/index.vue")['default']
 export const LazyPolyDetailChart: typeof import("../components/PolyDetailChart/index.vue")['default']

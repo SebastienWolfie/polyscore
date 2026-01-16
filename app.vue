@@ -5,7 +5,11 @@
 </template>
 
 <script setup>
+import { listenToUserStateChanged } from './apiss/authstate'
 
+onMounted(() => {
+  listenToUserStateChanged()
+})
 useHead({
   title: "Polyscore",
   link: [{ rel: 'icon', type: 'image/png', href: '/images/logo.svg' }],

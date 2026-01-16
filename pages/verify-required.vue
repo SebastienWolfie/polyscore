@@ -6,25 +6,33 @@
     </h2>
 
     <p class="text-gray-400 mb-6">
-      We've sent a verification link to <br>
+      Send a verification link to <br>
       <span class="text-indigo-400 font-semibold">{{ auth.unverifiedUser?.email }}</span>
     </p>
 
     <button @click="resend"
       class="bg-indigo-500 w-full py-3 rounded-lg font-bold text-black">
-      Resend verification email
+      Send verification email
+    </button>
+
+    <button @click="async() => logotuClicked()"
+      class="bg-red-500 w-full mt-5 py-3 rounded-lg font-bold text-black">
+      Logout
     </button>
   </div>
 </div>
 </template>
 
 <script setup>
+import logout from '../apiss/logout'
 const auth = useAuth()
 const { sendConfirmAccountEmail } = useEmaiApi()
 
-onMounted(() => {
-    resend()
-})
+
+async function logotuClicked() {
+  await logout()
+  navigateTo('/')
+}
 
 const resend = async () => {
   if (!auth.value.unverifiedUser) return

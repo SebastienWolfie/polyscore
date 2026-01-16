@@ -1,38 +1,8 @@
 <template>
   <div class="bg-[#0A0C10] text-white min-h-screen font-sans">
-    <!-- NAVBAR -->
-    <header
-      class="flex flex-col sm:flex-row items-start justify-between sm:items-center p-4 sm:p-6 bg-[#0D1117] border-b border-[#1F2530] gap-3 sm:gap-5 sticky top-0 z-10"
-    >
-      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-        <div class="text-blue-400 font-bold text-lg sm:text-xl">Polyscore <span class="text-base sm:text-sm">🇺🇸</span></div>
-        <div class="text-gray-400 text-xs sm:text-sm">Powered by Polymarket</div>
-      </div>
-      <!-- <input
-        v-model="searchQuery"
-        placeholder="Search markets..."
-        class="mt-2 sm:mt-0 sm:ml-auto w-full sm:w-auto flex-1 bg-[#11151D] border border-[#1F2530] rounded-full px-4 py-2 text-gray-300 text-sm placeholder-gray-500"
-      /> -->
-
-
-      <!-- <p class="text-blue-400 cursor-pointer" @click="() => learnModalOpen=true">Learn more</p> -->
-
-      <div v-if="!user" class="flex gap-3">
-        <button @click="showLogin=true" class="text-xs px-3 py-1 rounded-full border border-[#3D6FFF] text-[#7BA7FF]">
-          Sign In
-        </button>
-        <button @click="showSignup=true" class="text-xs px-3 py-1 rounded-full bg-[#3D6FFF] text-white">
-          Sign Up
-        </button>
-      </div>
-
-      <div v-else class="flex items-center gap-3 text-xs text-gray-400">
-        <span>{{ user.email }}</span>
-        <button @click="logout" class="text-red-400">Logout</button>
-      </div>
-
-    </header>
-
+    <Header @showSignup="showSignup=true"
+            @showLogin="showLogin=true"
+            @showLearnModal="learnModalOpen=true"/>
 
     <!-- OFFICIAL POLYMARKET PARTNER STRIP -->
     <a
@@ -364,9 +334,10 @@
 <script setup>
 import { getAll as getAllPolyscoreAddresses } from '../../apiss/polyscoreAddresses'
 import { create as savePolyscore } from '../../apiss/polyscore'
+import { getDefiscore, create as createScore } from '../../apiss/defiscore'
+
 
 const wallet = ref('')
-const searchQuery = ref('')
 const scoreVisible = ref(false)
 const isLoading = ref(false)
 const adminPolyscoreAddresses = ref([]);
@@ -406,21 +377,43 @@ const defiScore = ref(0)
 const defiGrade = ref('Poor')
 const defiGradeClass = ref('bg-red-500/20 text-red-400')
 
-function calculateDeFiScore(wallet) {
+
+
+
+async function calculateDeFiScore(wallet) {
+  // 1. Check if score already exists
+  const existing = await getDefiscore(wallet)
+
+  if (existing?.score !== undefined) {
+    defiScore.value = existing.score
+    calculateDeFiGrade(defiScore.value)
+    return
+  }
+
+  // 2. Generate score ONCE
   const isAdmin = adminPolyscoreAddresses.value.some(a =>
     (a.address || a).toLowerCase() === wallet.toLowerCase()
   )
 
-  if (isAdmin) {
-    defiScore.value = Math.floor(70 + Math.random() * 25)
-  } else {
-    defiScore.value = Math.floor(Math.random() * 30)
-  }
+  const generatedScore = isAdmin
+    ? Math.floor(70 + Math.random() * 25)
+    : Math.floor(Math.random() * 30)
 
-  if (defiScore.value >= 70) {
+  // 3. Persist to Firestore
+  await createScore(wallet, {
+    score: generatedScore
+  })
+
+  // 4. Apply locally
+  defiScore.value = generatedScore
+  calculateDeFiGrade(defiScore.value)
+}
+
+function calculateDeFiGrade(score) {
+  if (score >= 70) {
     defiGrade.value = 'Good'
     defiGradeClass.value = 'bg-green-500/20 text-green-400'
-  } else if (defiScore.value >= 40) {
+  } else if (score >= 40) {
     defiGrade.value = 'Average'
     defiGradeClass.value = 'bg-yellow-500/20 text-yellow-400'
   } else {
@@ -428,6 +421,8 @@ function calculateDeFiScore(wallet) {
     defiGradeClass.value = 'bg-red-500/20 text-red-400'
   }
 }
+
+
 
 
 // Watcher to reset visibility when wallet changes
@@ -543,7 +538,7 @@ async function generateScore() {
     (addr.address || addr).toLowerCase() === inputWalletLower 
   );
 
-  calculateDeFiScore(inputWalletLower)
+  await calculateDeFiScore(inputWalletLower)
 
   if (isAdmin) {
     try {

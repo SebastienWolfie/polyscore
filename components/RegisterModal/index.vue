@@ -167,6 +167,7 @@ const handleSubmit = async () => {
       auth.value.unverifiedUser = result
       return navigateTo("/verify-required")
     }
+    navigateTo(`/report/${auth.value.user.walletAddress}`)
     
     emit("onClose")
     loading.value = false

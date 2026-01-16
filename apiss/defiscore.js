@@ -12,7 +12,7 @@ import { db } from '../firebase'
 import Date from '../utils/Date'
 
 /**
- * Normalize wallet address (case-insensitive key)
+ * Normalize wallet address so Firestore is case-insensitive
  */
 function normalizeAddress(address) {
   if (!address) return address
@@ -20,15 +20,15 @@ function normalizeAddress(address) {
 }
 
 /**
- * Get all polyscores
+ * Get all DeFi scores
  */
 async function getAll() {
   return new Promise(async (resolve, reject) => {
     try {
-      const collectionRef = collection(db, 'polyscore')
+      const collectionRef = collection(db, 'defiscore')
       const querySnapshot = await getDocs(collectionRef)
 
-      let list = []
+      const list = []
       querySnapshot.forEach((docSnap) => {
         list.push({ id: docSnap.id, ...docSnap.data() })
       })
@@ -41,16 +41,16 @@ async function getAll() {
 }
 
 /**
- * Get polyscore by wallet address (case-insensitive)
+ * Get DeFi score by wallet (case-insensitive)
  */
-async function getPolyscore(address) {
+async function getDefiscore(address) {
   return new Promise(async (resolve, reject) => {
     try {
       const normalized = normalizeAddress(address)
-      const docRef = doc(db, 'polyscore', normalized)
-      const querySnapshot = await getDoc(docRef)
+      const docRef = doc(db, 'defiscore', normalized)
+      const snapshot = await getDoc(docRef)
 
-      resolve(querySnapshot.exists() ? querySnapshot.data() : null)
+      resolve(snapshot.exists() ? snapshot.data() : null)
     } catch (error) {
       reject(error)
     }
@@ -58,25 +58,25 @@ async function getPolyscore(address) {
 }
 
 /**
- * Create polyscore (or update if already exists)
+ * Create DeFi score (or update if exists)
  */
 async function create(address, item) {
   const normalized = normalizeAddress(address)
 
-  const existing = await getPolyscore(normalized)
+  const existing = await getDefiscore(normalized)
   if (existing) {
     return update(normalized, item)
   }
 
   return new Promise(async (resolve, reject) => {
     try {
-      const docRef = doc(db, 'polyscore', normalized)
+      const docRef = doc(db, 'defiscore', normalized)
 
       const payload = {
         ...item,
         id: normalized,
-        address: normalized,          // canonical address
-        originalAddress: address,     // optional, human-readable
+        address: normalized,          // canonical
+        originalAddress: address,     // optional (display/debug)
         dateCreated: new Date().toJSON()
       }
 
@@ -89,13 +89,13 @@ async function create(address, item) {
 }
 
 /**
- * Update polyscore (case-insensitive)
+ * Update DeFi score (case-insensitive)
  */
 async function update(address, item) {
   return new Promise(async (resolve, reject) => {
     try {
       const normalized = normalizeAddress(address)
-      const docRef = doc(db, 'polyscore', normalized)
+      const docRef = doc(db, 'defiscore', normalized)
 
       await updateDoc(docRef, item)
       resolve(item)
@@ -106,13 +106,13 @@ async function update(address, item) {
 }
 
 /**
- * Delete polyscore by wallet address (case-insensitive)
+ * Delete DeFi score by wallet (case-insensitive)
  */
 async function deleteScore(address) {
   return new Promise(async (resolve, reject) => {
     try {
       const normalized = normalizeAddress(address)
-      const docRef = doc(db, 'polyscore', normalized)
+      const docRef = doc(db, 'defiscore', normalized)
 
       await deleteDoc(docRef)
       resolve(true)
@@ -124,7 +124,7 @@ async function deleteScore(address) {
 
 export {
   getAll,
-  getPolyscore,
+  getDefiscore,
   create,
   update,
   deleteScore

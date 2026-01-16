@@ -2,11 +2,18 @@ import { getAuth } from "firebase/auth";
 import { app } from "../firebase";
 import { getUser } from './user';
 import PubSub from "../utils/PubSub";
-import { getAll as getAllReferrals } from './referral';
 
 
 function updateLocalStates(result) {
-    useAuth().value.user = result;
+    const auth = useAuth()
+    auth.value.user = result;
+    if (!result.emailVerified) {
+      auth.value.user = null
+      auth.value.unverifiedUser = result
+      return navigateTo("/verify-required")
+    }
+    navigateTo(`/report/${auth.value.user.walletAddress}`)
+
   }
 
 
@@ -18,8 +25,6 @@ function updateLocalStates(result) {
     auth.onAuthStateChanged(async (user) => {
       if (user){
         const result = await getUser(user?.uid);
-        const referrals = await getAllReferrals(user?.uid);
-        result.referrals = referrals;
         updateLocalStates(result);
         authPublisher.publish("USER_CHANGED", result);
       }else{
