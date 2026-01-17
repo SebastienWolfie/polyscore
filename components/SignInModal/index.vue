@@ -36,25 +36,24 @@
             class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-500 focus:ring-2 focus:ring-[#3D6FFF]/40 focus:outline-none" />
         </div>
 
-        <div v-if="auth.isWalletConnected">
+        <!-- <div v-if="auth.isWalletConnected">
           <label class="text-xs text-gray-400 mb-1 block">Connected wallet</label>
           <input v-model="auth.walletAddress" disabled
             class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-[#7BA7FF]" />
-        </div>
+        </div> -->
 
         <p v-if="error" class="text-red-400 text-xs font-semibold">{{ error }}</p>
 
         <!-- Wallet -->
-        <button
+        <!-- <button
           v-if="!showLoginButton"
           @click="connectClicked"
           class="w-full mt-2 bg-gradient-to-r from-[#3D6FFF] to-[#7BA7FF] hover:shadow-lg hover:shadow-blue-500/40 text-black font-bold py-3 rounded-xl transition">
           {{ connectLoading ? 'Connecting wallet...' : 'Connect Wallet' }}
-        </button>
+        </button> -->
 
         <!-- Login -->
         <button
-          v-else
           @click="handleSubmit"
           class="w-full mt-2 bg-gradient-to-r from-[#3D6FFF] to-[#7BA7FF] hover:shadow-lg hover:shadow-blue-500/40 text-black font-bold py-3 rounded-xl transition">
           {{ loading ? 'Signing in...' : 'Sign in to Polyscore' }}
@@ -107,9 +106,9 @@ async function googleClicked() {
   }
 }
 
-async function connectClicked() {
-  openModal()
-}
+// async function connectClicked() {
+//   openModal()
+// }
 
 
 const validateEmail = (email) => {
@@ -170,41 +169,41 @@ const handleSubmit = async () => {
 }
 
 
-onMounted(() => {
-  validateWalletConnect()
-})
+// onMounted(() => {
+//   validateWalletConnect()
+// })
 
 
 
-watch(() => auth.value.walletAddress, async() => {
-    validateWalletConnect()
-})
+// watch(() => auth.value.walletAddress, async() => {
+//     validateWalletConnect()
+// })
 
-async function validateWalletConnect() {
-  if (!auth.value.walletAddress) return;
+// async function validateWalletConnect() {
+//   if (!auth.value.walletAddress) return;
 
-  connectLoading.value = true;
-  auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
+//   connectLoading.value = true;
+//   auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
   
 
-  if (!auth.value.isWalletConnected) {
-      openModal()
-      return;
-  }
+//   if (!auth.value.isWalletConnected) {
+//       openModal()
+//       return;
+//   }
 
 
-  if (getChainID() != 137){
-      if (window.ethereum) await switchNetwork(137);
-      else {
-          await disconnectWallet();
-          auth.value.isWalletConnected = false;
-          auth.value.walletAddress = "";
-          alert("Switch to Polygon Mainnet Network");  
-      }
-      return;
-  }
+//   if (getChainID() != 137){
+//       if (window.ethereum) await switchNetwork(137);
+//       else {
+//           await disconnectWallet();
+//           auth.value.isWalletConnected = false;
+//           auth.value.walletAddress = "";
+//           alert("Switch to Polygon Mainnet Network");  
+//       }
+//       return;
+//   }
   
-  showLoginButton.value = true;
-}
+//   showLoginButton.value = true;
+// }
 
 </script>

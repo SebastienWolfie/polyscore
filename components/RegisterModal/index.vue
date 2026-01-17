@@ -52,24 +52,23 @@
           </div>
         </div>
 
-        <div v-if="auth.isWalletConnected">
-          <label class="text-xs text-gray-400 mb-1 block">Connected wallet</label>
-          <input v-model="auth.walletAddress" disabled
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">Wallet address</label>
+          <input v-model="walletAddress" placeholder="0x..."
             class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-[#7BA7FF]" />
         </div>
 
         <p v-if="error" class="text-red-400 text-xs font-semibold">{{ error }}</p>
 
         <!-- Wallet / Submit -->
-        <button
+        <!-- <button
           v-if="!showLoginButton"
           @click="connectClicked"
           class="w-full mt-2 bg-gradient-to-r from-[#3D6FFF] to-[#7BA7FF] hover:shadow-lg hover:shadow-blue-500/40 text-black font-bold py-3 rounded-xl transition">
           {{ connectLoading ? 'Connecting wallet...' : 'Connect Wallet' }}
-        </button>
+        </button> -->
 
         <button
-          v-else
           @click="handleSubmit"
           class="w-full mt-2 bg-gradient-to-r from-[#3D6FFF] to-[#7BA7FF] hover:shadow-lg hover:shadow-blue-500/40 text-black font-bold py-3 rounded-xl transition">
           {{ loading ? 'Creating account...' : 'Create Polyscore account' }}
@@ -105,6 +104,7 @@ import { create as saveAddressSignature, getAddressSignature, update as updateAd
 
 const email = ref('')
 const username = ref('')
+const walletAddress = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const emit = defineEmits(['onClose'])
@@ -118,6 +118,7 @@ const auth = useAuth();
 
 watch(() => email.value, () => error.value = '')
 watch(() => username.value, () => error.value = '')
+watch(() => walletAddress.value, () => error.value = '')
 watch(() => confirmPassword.value, () => error.value = '')
 watch(() => password.value, () => error.value = '')
 
@@ -155,11 +156,16 @@ const handleSubmit = async () => {
     return
   }
 
+  if (!isValidEvmAddress(walletAddress.value)) {
+      error.value = "Please enter a valid Polyogon wallet address."
+      return;
+  }
+
   loading.value = true;
   try {
-    const registerResult = await register(username.value, email.value, password.value, auth.value.walletAddress)
+    const registerResult = await register(username.value, email.value, password.value, walletAddress.value)
     const { sendConfirmAccountEmail } = useEmaiApi();
-    const result = await sendConfirmAccountEmail(registerResult.id, email.value, username.value, auth.value.walletAddress)
+    const result = await sendConfirmAccountEmail(registerResult.id, email.value, username.value, walletAddress.value)
     auth.value.showEmailConfirmationSent = true;
 
     if (!result.emailVerified) {
@@ -167,7 +173,7 @@ const handleSubmit = async () => {
       auth.value.unverifiedUser = result
       return navigateTo("/verify-required")
     }
-    navigateTo(`/report/${auth.value.user.walletAddress}`)
+    navigateTo(`/report/${walletAddress.value}`)
     
     emit("onClose")
     loading.value = false
@@ -194,44 +200,50 @@ const handleSubmit = async () => {
 }
 
 
-async function connectClicked() {
-  openModal()
-}
+const isValidEvmAddress = (address) => {
+    const regex = /^0x[a-fA-F0-9]{40}$/;
+    return regex.test(address);
+};
 
 
-onMounted(() => {
-  validateWalletConnect()
-})
+// async function connectClicked() {
+//   openModal()
+// }
 
-watch(() => auth.value.walletAddress, async() => {
-    validateWalletConnect()
-})
 
-async function validateWalletConnect() {
-  if (!auth.value.walletAddress) return;
+// onMounted(() => {
+//   validateWalletConnect()
+// })
 
-    connectLoading.value = true;
-    auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
+// watch(() => auth.value.walletAddress, async() => {
+//     validateWalletConnect()
+// })
+
+// async function validateWalletConnect() {
+//   if (!auth.value.walletAddress) return;
+
+//     connectLoading.value = true;
+//     auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
     
 
-    if (!auth.value.isWalletConnected) {
-        openModal()
-        return;
-    }
+//     if (!auth.value.isWalletConnected) {
+//         openModal()
+//         return;
+//     }
 
 
-    if (getChainID() != 137){
-        if (window.ethereum) await switchNetwork(137);
-        else {
-            await disconnectWallet();
-            auth.value.isWalletConnected = false;
-            auth.value.walletAddress = "";
-            alert("Switch to Polygon Mainnet Network");  
-        }
-        return;
-    }
-    showLoginButton.value = true
-}
+//     if (getChainID() != 137){
+//         if (window.ethereum) await switchNetwork(137);
+//         else {
+//             await disconnectWallet();
+//             auth.value.isWalletConnected = false;
+//             auth.value.walletAddress = "";
+//             alert("Switch to Polygon Mainnet Network");  
+//         }
+//         return;
+//     }
+//     showLoginButton.value = true
+// }
 
     // onMounted(() => {
 

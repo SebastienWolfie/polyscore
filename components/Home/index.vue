@@ -103,13 +103,13 @@
             </div>
           </div>
 
-          <a
+          <!-- <a
             href="https://www.polywhaler.net/"
             target="_blank"
             class="text-blue-400 font-semibold text-[14px] sm:text-base mt-2 inline-block underline"
           >
             See full list →
-          </a>
+          </a> -->
             
         </div>
 
@@ -255,7 +255,8 @@
               Visit Polywhaler →
             </a> -->
 
-            <p></p>
+            <p class="text-blue-400 font-semibold cursor-pointer text-sm sm:text-base mt-2 inline-block underline"
+               @click="() => showAuthExplainModal = true">View full report</p>
             
           </div>
 
@@ -330,8 +331,29 @@
 
     <!-- MODALS -->
     <LearnModal v-if="learnModalOpen" @close="learnModalOpen=false" />
-    <RegisterModal v-if="showSignup" @onClose="showSignup=false"/>
-    <SignInModal v-if="showLogin" @onClose="showLogin=false"/>
+
+    <RegisterModal v-if="showSignup"
+                   @onClose="showSignup=false"
+                   @signInClicked="() => {
+                    showSignup = false
+                    showLogin = true
+                   }"/>
+
+    <SignInModal v-if="showLogin" 
+                 @onClose="showLogin=false"
+                 @registerClicked="() => {
+                  showLogin = false
+                  showSignup = true
+                 }"/>
+
+    <AuthExplainModal
+      v-if="showAuthExplainModal"
+      @close="showAuthExplainModal = false"
+      @registerClicked="() => {
+        showAuthExplainModal = false
+        showSignup = true
+      }"
+    />
   </div>
 </template>
 
@@ -349,6 +371,7 @@ const adminPolyscoreAddresses = ref([]);
 
 const showLogin = ref(false)
 const showSignup = ref(false)
+const showAuthExplainModal = ref(false)
 
 
 
