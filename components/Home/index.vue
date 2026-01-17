@@ -642,6 +642,15 @@ async function generateScore() {
       stats.value.volume = '$0'
       stats.value.winRate = '0%'
       calculateRank(score.value)
+      const payload = {
+          smartMoneyScore: score.value,
+          stats: {
+              totalTrades: 0,
+              totalVolume: '$0',
+              winRate: '0%'
+          }
+      };
+      await savePolyscore(wallet.value, payload);
 
     }
     calculateRank(score.value)
