@@ -54,7 +54,7 @@
           </div>
         </div>
 
-        <div class="bg-[#0D1117] p-5 rounded-2xl border border-[#1F2530] shadow-xl">
+        <div  v-if="!scoreVisible" class="bg-[#0D1117] p-5 rounded-2xl border border-[#1F2530] shadow-xl">
           <div class="flex justify-between items-center mb-4">
             <div class="text-sm font-semibold text-[#CBD4FF]">
               🐋 Top Polymarket Scorers — Last 90 Days
@@ -138,40 +138,10 @@
           </button>
         </div>
 
-        <div class="text-gray-500 text-xs mb-3">
+        <div v-if="!scoreVisible" class="text-gray-500 text-xs mb-3">
           This tool does not request any permissions. Scores are estimates based on public on-chain activity.
         </div>
 
-
-        <div class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530]">
-          <div class="text-gray-400 text-xs mb-1">Global Ranking</div>
-          <div class="text-2xl font-extrabold text-[#7BA7FF]">
-            #{{ worldwideRank?.toLocaleString() || '—' }}
-          </div>
-          <div class="text-xs text-gray-500">
-            Out of {{ totalTracked.toLocaleString() }} tracked Polymarket wallets  
-            <span class="text-green-400 font-semibold">Top {{ percentile }}%</span>
-          </div>
-        </div>
-
-        <div class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mt-3">
-          <div class="text-gray-400 text-xs mb-1">DeFi Native Usage Score</div>
-
-          <div class="flex items-center gap-3">
-            <div class="text-2xl font-bold text-[#7BA7FF] blur-sm select-none">
-              {{ defiScore }}/100
-            </div>
-
-            <div :class="['text-xs px-2 py-0.5 rounded-full font-semibold', defiGradeClass]">
-              {{ defiGrade }}
-            </div>
-          </div>
-
-          <p class="text-xs text-gray-500 mt-1">
-            Measures how deeply your wallet interacts with DeFi before using Polymarket.
-            Higher DeFi scores significantly boost your PolyScore.
-          </p>
-        </div>
 
         <div class="text-xs text-gray-500 mt-1">
           Your DeFi Native Usage Score tracks how much real DeFi capital you move
@@ -241,17 +211,52 @@
    
           </div>
 
+
+
+          <div v-if="scoreVisible" class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530]">
+            <div class="text-gray-400 text-xs mb-1">Global Ranking</div>
+            <div class="text-2xl font-extrabold text-[#7BA7FF]">
+              #{{ worldwideRank?.toLocaleString() || '—' }}
+            </div>
+            <div class="text-xs text-gray-500">
+              Out of {{ totalTracked.toLocaleString() }} tracked Polymarket wallets  
+              <span class="text-green-400 font-semibold">Top {{ percentile }}%</span>
+            </div>
+          </div>
+
+          <div v-if="scoreVisible" class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mt-3">
+            <div class="text-gray-400 text-xs mb-1">DeFi Native Usage Score</div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-2xl font-bold text-[#7BA7FF] blur-sm select-none">
+                {{ defiScore }}/100
+              </div>
+
+              <div :class="['text-xs px-2 py-0.5 rounded-full font-semibold', defiGradeClass]">
+                {{ defiGrade }}
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-1">
+              Measures how deeply your wallet interacts with DeFi before using Polymarket.
+              Higher DeFi scores significantly boost your PolyScore.
+            </p>
+          </div>
+
           <!-- RECOMMEND CARD -->
           <div class="max-w-3xl mx-auto mt-5 bg-[#0D1117] p-6 rounded-xl border border-[#1F2530] shadow-lg">
             <div class="text-lg sm:text-xl font-bold mb-1">Improve your Polyscore?</div>
             <div class="text-gray-400 text-sm sm:text-base">Check your metric through full on-chain report and track whale activity on polymarket from the best traders.</div>
-            <a
+            <!-- <a
               href="https://www.polywhaler.net/"
               target="_blank"
               class="text-blue-400 font-semibold text-sm sm:text-base mt-2 inline-block underline"
             >
               Visit Polywhaler →
-            </a>
+            </a> -->
+
+            <p></p>
+            
           </div>
 
           <!-- PROFILE + STATS -->
