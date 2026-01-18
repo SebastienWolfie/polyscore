@@ -57,9 +57,9 @@
         <div  v-if="!scoreVisible" class="bg-[#0D1117] p-5 rounded-2xl border border-[#1F2530] shadow-xl">
           <div class="flex justify-between items-center mb-4">
             <div class="text-sm font-semibold text-[#CBD4FF]">
-              🐋 Top Polymarket Scorers — Last 90 Days
+              🐋 Top Polymarket Scorers
             </div>
-            <div class="text-xs text-gray-500">Updated every 24h</div>
+            <!-- <div class="text-xs text-gray-500">Updated every 24h</div> -->
           </div>
 
           <div class="space-y-3">
@@ -152,9 +152,9 @@
 
 
 
-        <div v-if="scoreVisible" class="bg-gradient-to-r mt-3 from-[#3D6FFF] to-[#7BA7FF] p-3 rounded-xl text-black text-sm font-semibold shadow-lg">
+        <!-- <div v-if="scoreVisible" class="bg-gradient-to-r mt-3 from-[#3D6FFF] to-[#7BA7FF] p-3 rounded-xl text-black text-sm font-semibold shadow-lg">
           🔥 Wallet is outperforming {{ percentile }}% of all Polymarket traders.
-        </div>
+        </div> -->
 
         
         <!-- SCORE SECTION -->
@@ -246,7 +246,7 @@
           <!-- RECOMMEND CARD -->
           <div class="max-w-3xl mx-auto mt-5 bg-[#0D1117] p-6 rounded-xl border border-[#1F2530] shadow-lg">
             <div class="text-lg sm:text-xl font-bold mb-1">Improve your Polyscore?</div>
-            <div class="text-gray-400 text-sm sm:text-base">Check your metric through full on-chain report and track whale activity on polymarket from the best traders.</div>
+            <div class="text-gray-400 text-sm sm:text-base">Access your complete on-chain performance report and identify actions to strengthen your airdrop eligibility.</div>
             <!-- <a
               href="https://www.polywhaler.net/"
               target="_blank"
@@ -735,7 +735,7 @@ function updateTierLogic(s) {
   } else {
     badgeText.value = 'Minimal activity'
     badgeClass.value = 'bg-[rgba(255,77,77,0.15)] border border-[#FF4D4D] text-[#FEE2E2]'
-    scoreInterpret.value = 'This wallet has little to no significant on-chain history on Polymarket. Check the address or begin trading to improve your score.'
+    scoreInterpret.value = 'This wallet does not currently meet airdrop eligibility requirements. View the full on-chain report to see the metrics considered'
     scoreSub.value = 'Low on-chain footprint.'
     tier = 'low'
   }
