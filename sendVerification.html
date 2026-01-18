@@ -1,48 +1,4 @@
-import * as nodemailer from 'nodemailer';
-import jwt from 'jsonwebtoken'; // You might need: npm install jsonwebtoken @types/jsonwebtoken
-
-// SECRET KEY: Put this in your .env file in production!
-const JWT_SECRET = 'ghvbjhhbjhbjbyuybubybyytvvtvgvyvbubhubyvtuiuh78g87gyububyubbuyvtvvytvuyvyg78gy';
-
-export default defineEventHandler(async (event) => {
-  try {
-    const body = await readBody(event);
-    const { id, email, walletAddress, username } = body;
-
-    if (!id, !email || !walletAddress) {
-      throw createError({ statusCode: 400, message: 'Missing id, email or wallet address' });
-    }
-
-    // 1. Generate a secure, time-limited token (expires in 24 hours)
-    const token = jwt.sign(
-      { id, email, walletAddress, from: 'polyscore', type: 'email_verification' },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // 2. Create the Verification Link
-    // CHANGE THIS to your real domain in production
-    const baseUrl = 'https://morkie.web.app/'; 
-    const verificationLink = `${baseUrl}/verify/${token}/polyscore`;
-
-    // 3. Configure Transporter
-    let transporter = nodemailer.createTransport({
-        host: "mail.privateemail.com",
-        port: 465,
-        secure: true,
-        auth: {
-            user: 'info@polywhaler.net', // Replace with your actual email
-            pass: '$Wolfie@420' // Replace with env variable in prod
-        }
-    });
-
-    // 4. Send Email
-    const mail_configs = {
-        from: '"Polyscore Security" <info@polywhaler.net>',
-        to: email, 
-        subject: 'Verify your Polyscore Account',
-        html: `
-        <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -145,15 +101,3 @@ export default defineEventHandler(async (event) => {
   </table>
 </body>
 </html>
-`
-    };
-
-    await transporter.sendMail(mail_configs);
-
-    return { success: true, message: 'Verification email sent' };
-
-  } catch (err) {
-    console.error("Email Error:", err);
-    throw createError({ statusCode: 500, message: err.message });
-  }
-});

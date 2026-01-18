@@ -1141,12 +1141,23 @@ const sendVerification_post = defineEventHandler(async (event) => {
           <tr>
             <td style="padding:36px 32px;">
               <h2 style="margin:0 0 12px;font-size:22px;color:white;">
-                Welcome, ${username} \u{1F44B}
+                Welcome to Polyscore, ${username} \u{1F44B}
               </h2>
 
               <p style="margin:0 0 16px;color:#9ca3af;font-size:14px;line-height:1.6;">
-                You\u2019re about to unlock real-time whale tracking, $10k+ trade alerts, and AI-powered market sentiment analysis.
+                You\u2019re almost set.
               </p>
+
+              <p style="margin:0 0 16px;color:#9ca3af;font-size:14px;line-height:1.6;">
+                To activate your account and unlock full on-chain intelligence, please verify your email and connect your wallet to confirm ownership of the address below.
+              </p>
+
+              <p style="margin:0 0 16px;color:#9ca3af;font-size:14px;line-height:1.6;">
+                This quick step ensures your Polyscore reflects real DeFi activity and enables accurate whale and trader analysis.
+              </p>
+
+
+
 
               <!-- Wallet Card -->
               <div style="background:#000;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px 16px;margin:18px 0;">
@@ -1158,8 +1169,9 @@ const sendVerification_post = defineEventHandler(async (event) => {
                 </div>
               </div>
 
+
               <p style="color:#9ca3af;font-size:13px;">
-                Click below to confirm your wallet and activate:
+                Once verified, you\u2019ll gain access to:
               </p>
 
               <ul style="padding-left:18px;color:#9ca3af;font-size:13px;line-height:1.6;">
@@ -1168,11 +1180,12 @@ const sendVerification_post = defineEventHandler(async (event) => {
                 <li>Insider activity detection</li>
               </ul>
 
+
               <!-- CTA -->
               <div style="text-align:center;margin:32px 0 22px;">
                 <a href="${verificationLink}"
                    style="display:inline-block;padding:15px 40px;border-radius:14px;background:linear-gradient(90deg,#6366f1,#a855f7);color:white;font-weight:800;text-decoration:none;font-size:14px;box-shadow:0 0 25px rgba(168,85,247,0.6);">
-                  Verify Wallet \u2192
+                  \u{1F449} Verify Wallet & Activate Polyscore
                 </a>
               </div>
 

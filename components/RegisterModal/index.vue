@@ -53,9 +53,10 @@
         </div>
 
         <div>
-          <label class="text-xs text-gray-400 mb-1 block">Wallet address</label>
+          <label class="text-xs text-gray-400 mb-1 block">DeFi Wallet Address (Self-Custody)</label>
           <input v-model="walletAddress" placeholder="0x..."
             class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-[#7BA7FF]" />
+          <p class="text-[11px] text-gray-400 block">Enter the wallet you control and use for non-chain deposits and withdrawals. Assigned trading addresses will not capture full metrics.</p>
         </div>
 
         <p v-if="error" class="text-red-400 text-xs font-semibold">{{ error }}</p>

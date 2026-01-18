@@ -218,10 +218,10 @@
             <div class="text-2xl font-extrabold text-[#7BA7FF]">
               #{{ worldwideRank?.toLocaleString() || '—' }}
             </div>
-            <div class="text-xs text-gray-500">
+            <!-- <div class="text-xs text-gray-500">
               Out of {{ totalTracked.toLocaleString() }} tracked Polymarket wallets  
               <span class="text-green-400 font-semibold">Top {{ percentile }}%</span>
-            </div>
+            </div> -->
           </div>
 
           <div v-if="scoreVisible" class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mt-3">
@@ -256,7 +256,7 @@
             </a> -->
 
             <p class="text-blue-400 font-semibold cursor-pointer text-sm sm:text-base mt-2 inline-block underline"
-               @click="() => showAuthExplainModal = true">View full report</p>
+               @click="() => viewFullReportClicked()">View full report</p>
             
           </div>
 
@@ -364,6 +364,7 @@ import { create as savePolyscore } from '../../apiss/polyscore'
 import { getDefiscore, create as createScore } from '../../apiss/defiscore'
 
 
+const auth = useAuth()
 const wallet = ref('')
 const scoreVisible = ref(false)
 const isLoading = ref(false)
@@ -779,5 +780,19 @@ onMounted(() => {
 onUnmounted(() => {
   if (timer) clearInterval(timer);
 });
+
+
+function viewFullReportClicked() {
+  if (!auth.value.user) {
+    showAuthExplainModal.value = true
+  }
+  else if (!auth.value.user.emailVerified) {
+    auth.value.unverifiedUser = auth.value.user
+    auth.value.user = null
+    navigateTo("/verify-required")
+  }else{
+    navigateTo(`/report/${auth.value.user.walletAddress}`)
+  }
+}
 
 </script>

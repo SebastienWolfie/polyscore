@@ -6,8 +6,7 @@ export const useAuth = () =>
         unverifiedUser: null,
         walletAddress: '',
         isWalletConnected: false,
-        showEmailConfirmationSent: false,
-        romUser: null
+        showEmailConfirmationSent: false
   }));
   
 export const useAirdrops = () =>
