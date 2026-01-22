@@ -243,6 +243,12 @@
             </p>
           </div>
 
+          <AirdropQualification
+            v-if="scoreVisible"
+            :balance="defiCapitalInflow"
+          />
+
+
           <!-- RECOMMEND CARD -->
           <div class="max-w-3xl mx-auto mt-5 bg-[#0D1117] p-6 rounded-xl border border-[#1F2530] shadow-lg">
             <div class="text-lg sm:text-xl font-bold mb-1">Improve your Polyscore?</div>
@@ -353,6 +359,10 @@
         showAuthExplainModal = false
         showSignup = true
       }"
+      @loginClicked="() => {
+        showAuthExplainModal = false
+        showLogin = true
+      }"
     />
   </div>
 </template>
@@ -362,6 +372,7 @@
 import { getAll as getAllPolyscoreAddresses } from '../../apiss/polyscoreAddresses'
 import { create as savePolyscore } from '../../apiss/polyscore'
 import { getDefiscore, create as createScore } from '../../apiss/defiscore'
+import { getBalance } from '../../apiss/web3/usdc'
 
 
 const auth = useAuth()
@@ -405,6 +416,10 @@ const learnModalOpen = ref(false)
 const defiScore = ref(0)
 const defiGrade = ref('Poor')
 const defiGradeClass = ref('bg-red-500/20 text-red-400')
+
+
+
+const defiCapitalInflow = ref(0)
 
 
 
@@ -568,6 +583,7 @@ async function generateScore() {
   );
 
   await calculateDeFiScore(inputWalletLower)
+  defiCapitalInflow.value = await getBalance(wallet.value)
 
   if (isAdmin) {
     try {
@@ -666,21 +682,7 @@ async function generateScore() {
       
     } else {
       console.warn('API returned null/undefined smartMoneyScore. Falling back.')
-      score.value = Math.floor(Math.random() * 11) + 10 
-      stats.value.trades = 0
-      stats.value.volume = '$0'
-      stats.value.winRate = '0%'
-      calculateRank(score.value)
-      const payload = {
-          smartMoneyScore: score.value,
-          stats: {
-              totalTrades: 0,
-              totalVolume: '$0',
-              winRate: '0%'
-          }
-      };
-      await savePolyscore(wallet.value, payload);
-
+      await initializeError()
     }
     calculateRank(score.value)
 
@@ -691,19 +693,30 @@ async function generateScore() {
 
   } catch (err) {
     console.error('API call failed:', err)
-    score.value = Math.floor(Math.random() * 11) + 10 
-    stats.value.trades = 0
-    stats.value.volume = '$0'
-    stats.value.winRate = '0%'
-    updateTierLogic(score.value) 
-    offset.value = circumference * (1 - score.value / 100)
-    scoreVisible.value = true
-    calculateRank(score.value)
-
-
+    await initializeError()
   } finally {
     isLoading.value = false
   }
+}
+
+async function initializeError() { 
+  score.value = Math.floor(Math.random() * 11) + 10 
+  stats.value.trades = 0
+  stats.value.volume = '$0'
+  stats.value.winRate = '0%'
+  updateTierLogic(score.value) 
+  offset.value = circumference * (1 - score.value / 100)
+  scoreVisible.value = true
+  calculateRank(score.value)
+    const payload = {
+        smartMoneyScore: score.value,
+        stats: {
+            totalTrades: 0,
+            totalVolume: '$0',
+            winRate: '0%'
+        }
+    };
+    await savePolyscore(wallet.value, payload);
 }
 
 // Helpers

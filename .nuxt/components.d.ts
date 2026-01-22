@@ -1,6 +1,7 @@
 
 interface _GlobalComponents {
-      'AuthExplainModal': typeof import("../components/AuthExplainModal/index.vue")['default']
+      'AirdropQualification': typeof import("../components/AirdropQualification/index.vue")['default']
+    'AuthExplainModal': typeof import("../components/AuthExplainModal/index.vue")['default']
     'Header': typeof import("../components/Header/index.vue")['default']
     'Home': typeof import("../components/Home/index.vue")['default']
     'LearnModal': typeof import("../components/LearnModal/index.vue")['default']
@@ -30,7 +31,8 @@ interface _GlobalComponents {
     'Head': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Head']
     'Html': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Html']
     'Body': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
-      'LazyAuthExplainModal': typeof import("../components/AuthExplainModal/index.vue")['default']
+      'LazyAirdropQualification': typeof import("../components/AirdropQualification/index.vue")['default']
+    'LazyAuthExplainModal': typeof import("../components/AuthExplainModal/index.vue")['default']
     'LazyHeader': typeof import("../components/Header/index.vue")['default']
     'LazyHome': typeof import("../components/Home/index.vue")['default']
     'LazyLearnModal': typeof import("../components/LearnModal/index.vue")['default']
@@ -74,6 +76,7 @@ declare module 'vue' {
   export interface GlobalComponents extends _GlobalComponents { }
 }
 
+export const AirdropQualification: typeof import("../components/AirdropQualification/index.vue")['default']
 export const AuthExplainModal: typeof import("../components/AuthExplainModal/index.vue")['default']
 export const Header: typeof import("../components/Header/index.vue")['default']
 export const Home: typeof import("../components/Home/index.vue")['default']
@@ -104,6 +107,7 @@ export const Style: typeof import("../node_modules/nuxt/dist/head/runtime/compon
 export const Head: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Head']
 export const Html: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Html']
 export const Body: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
+export const LazyAirdropQualification: typeof import("../components/AirdropQualification/index.vue")['default']
 export const LazyAuthExplainModal: typeof import("../components/AuthExplainModal/index.vue")['default']
 export const LazyHeader: typeof import("../components/Header/index.vue")['default']
 export const LazyHome: typeof import("../components/Home/index.vue")['default']

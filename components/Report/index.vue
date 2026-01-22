@@ -5,6 +5,18 @@
 
     <main class="max-w-5xl mx-auto px-4 mt-8 space-y-6">
       
+       <div class="mb-1">
+          <p @click="() => navigateTo('/')"
+              class="flex items-center cursor-pointer text-sm text-gray-300 hover:text-white transition-colors font-medium">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+              </svg>
+              Back to Home
+            </p>
+      </div>
+    
       <p class="text-center text-gray-500 text-xs uppercase tracking-wider mb-8">
         Independent analytics for Polymarket participants
       </p>
@@ -34,6 +46,11 @@
           </div>
         </div>
       </div>
+
+
+      <AirdropQualification
+        :balance="defiCapitalInflow"
+      />
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         

@@ -12,7 +12,7 @@ function updateLocalStates(result) {
       auth.value.unverifiedUser = result
       return navigateTo("/verify-required")
     }
-    navigateTo(`/report/${auth.value.user.walletAddress}`)
+    // navigateTo(`/report/${auth.value.user.walletAddress}`)
 
   }
 
