@@ -212,6 +212,41 @@
           </div>
 
 
+          <!-- PROFILE + STATS -->
+          <div class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mb-4">
+            <div class="flex items-center gap-3 mb-2">
+              <div
+                class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7BA7FF] to-[#3D6FFF] flex items-center justify-center font-bold text-sm sm:text-base"
+              >
+                {{ initialsFromWallet(wallet) }}
+              </div>
+              <div>
+                <div class="text-gray-100 text-sm sm:text-base">{{ shortWallet(wallet) || 'Wallet activity preview' }}</div>
+                <div class="text-gray-400 text-xs sm:text-sm">
+                  Connect your wallet on Polymarket to unlock a full on-chain report.
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mt-2 text-left">
+              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
+                <div class="text-gray-400 text-xs mb-1">Win Rate</div>
+                <div class="text-[#3D6FFF] font-semibold select-none">{{ stats.winRate }}</div>
+              </div>
+
+              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
+                <div class="text-gray-400 text-xs mb-1">Total trades</div>
+                <div class="text-[#3D6FFF] font-semibold select-none">{{ stats.trades }}</div>
+              </div>
+
+              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
+                <div class="text-gray-400 text-xs mb-1">Volume (est.)</div>
+                <div class="text-[#3D6FFF] font-semibold select-none">{{ stats.volume }}</div>
+              </div>
+            </div>
+          </div>
+
+
 
           <div v-if="scoreVisible" class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530]">
             <div class="text-gray-400 text-xs mb-1">Global Ranking</div>
@@ -243,10 +278,10 @@
             </p>
           </div>
 
-          <AirdropQualification
+          <!-- <AirdropQualification
             v-if="scoreVisible"
             :balance="defiCapitalInflow"
-          />
+          /> -->
 
 
           <!-- RECOMMEND CARD -->
@@ -264,40 +299,6 @@
             <p class="text-blue-400 font-semibold cursor-pointer text-sm sm:text-base mt-2 inline-block underline"
                @click="() => viewFullReportClicked()">View full report</p>
             
-          </div>
-
-          <!-- PROFILE + STATS -->
-          <div class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mb-4">
-            <div class="flex items-center gap-3 mb-2">
-              <div
-                class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7BA7FF] to-[#3D6FFF] flex items-center justify-center font-bold text-sm sm:text-base"
-              >
-                {{ initialsFromWallet(wallet) }}
-              </div>
-              <div>
-                <div class="text-gray-100 text-sm sm:text-base">{{ shortWallet(wallet) || 'Wallet activity preview' }}</div>
-                <div class="text-gray-400 text-xs sm:text-sm">
-                  Connect your wallet on Polymarket to unlock a full on-chain report.
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 mt-2 text-left">
-              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
-                <div class="text-gray-400 text-xs mb-1">Win Rate</div>
-                <div class="text-[#3D6FFF] font-semibold blur-sm select-none">{{ stats.winRate }}</div>
-              </div>
-
-              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
-                <div class="text-gray-400 text-xs mb-1">Total trades</div>
-                <div class="text-[#3D6FFF] font-semibold blur-sm select-none">{{ stats.trades }}</div>
-              </div>
-
-              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
-                <div class="text-gray-400 text-xs mb-1">Volume (est.)</div>
-                <div class="text-[#3D6FFF] font-semibold blur-sm select-none">{{ stats.volume }}</div>
-              </div>
-            </div>
           </div>
 
           <!-- HEATMAP -->
