@@ -1094,7 +1094,7 @@ const sendVerification_post = defineEventHandler(async (event) => {
       JWT_SECRET,
       { expiresIn: "24h" }
     );
-    const baseUrl = "http://localhost:3005";
+    const baseUrl = "https://morkie.web.app";
     const verificationLink = `${baseUrl}/verify/${token}/polyscore`;
     let transporter = nodemailer.createTransport({
       host: "mail.privateemail.com",

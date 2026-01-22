@@ -23,8 +23,8 @@ export default defineEventHandler(async (event) => {
     // 2. Create the Verification Link
     // CHANGE THIS to your real domain in production
 
-    // const baseUrl = 'https://morkie.web.app'; 
-    const baseUrl = 'http://localhost:3005'; 
+    const baseUrl = 'https://morkie.web.app'; 
+    // const baseUrl = 'http://localhost:3005'; 
     const verificationLink = `${baseUrl}/verify/${token}/polyscore`;
 
     // 3. Configure Transporter
