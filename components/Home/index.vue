@@ -207,76 +207,125 @@
 
             </div>
 
+            <!-- GLOBAL RANKING (REDESIGNED) -->
+            <div class="mt-4 pt-3 border-t border-[#1F2530]">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-gray-400 text-xs uppercase tracking-wide">
+                    Global Ranking
+                  </div>
+                  <div class="text-gray-500 text-[11px]">
+                    Among all Polymarket wallets
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="text-xl sm:text-2xl font-extrabold text-[#7BA7FF] tracking-tight">
+                    #{{ worldwideRank?.toLocaleString() || '—' }}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+
 
    
           </div>
 
 
-          <!-- PROFILE + STATS -->
+          <!-- PROFILE + STATS + DEFI SCORE -->
           <div class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mb-4">
-            <div class="flex items-center gap-3 mb-2">
+
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-4">
               <div
                 class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7BA7FF] to-[#3D6FFF] flex items-center justify-center font-bold text-sm sm:text-base"
               >
                 {{ initialsFromWallet(wallet) }}
               </div>
-              <div>
-                <div class="text-gray-100 text-sm sm:text-base">{{ shortWallet(wallet) || 'Wallet activity preview' }}</div>
+
+              <div class="leading-tight">
+                <!-- Username -->
+                <div class="text-gray-100 text-sm sm:text-base font-semibold">
+                  {{ username || 'Anonymous Trader' }}
+                </div>
+
+                <!-- Wallet -->
                 <div class="text-gray-400 text-xs sm:text-sm">
+                  {{ shortWallet(wallet) || 'Wallet activity preview' }}
+                </div>
+
+                <!-- Subtitle -->
+                <div class="text-gray-500 text-[11px] sm:text-xs">
                   Connect your wallet on Polymarket to unlock a full on-chain report.
                 </div>
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-2 mt-2 text-left">
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left">
+
+              <!-- DeFi Score -->
+              <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
+                <div class="text-gray-400 text-xs mb-1">DeFi Score</div>
+                <div class="flex items-center gap-2">
+                  <div class="text-[#7BA7FF] blur-sm font-semibold select-none">
+                    {{ defiScore }}/100
+                  </div>
+                  <div
+                    :class="[
+                      'text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
+                      defiGradeClass
+                    ]"
+                  >
+                    {{ defiGrade }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Win Rate -->
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
                 <div class="text-gray-400 text-xs mb-1">Win Rate</div>
-                <div class="text-[#3D6FFF] font-semibold select-none">{{ stats.winRate }}</div>
+                <div class="text-[#3D6FFF] font-semibold blur-sm select-none">
+                  {{ stats.winRate }}
+                </div>
               </div>
 
+              <!-- Total Trades -->
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
                 <div class="text-gray-400 text-xs mb-1">Total trades</div>
-                <div class="text-[#3D6FFF] font-semibold select-none">{{ stats.trades }}</div>
+                <div class="text-[#3D6FFF] font-semibold select-none">
+                  {{ stats.trades }}
+                </div>
               </div>
 
+              <!-- Volume -->
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
                 <div class="text-gray-400 text-xs mb-1">Volume (est.)</div>
-                <div class="text-[#3D6FFF] font-semibold select-none">{{ stats.volume }}</div>
-              </div>
-            </div>
-          </div>
-
-
-
-          <div v-if="scoreVisible" class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530]">
-            <div class="text-gray-400 text-xs mb-1">Global Ranking</div>
-            <div class="text-2xl font-extrabold text-[#7BA7FF]">
-              #{{ worldwideRank?.toLocaleString() || '—' }}
-            </div>
-            <!-- <div class="text-xs text-gray-500">
-              Out of {{ totalTracked.toLocaleString() }} tracked Polymarket wallets  
-              <span class="text-green-400 font-semibold">Top {{ percentile }}%</span>
-            </div> -->
-          </div>
-
-          <div v-if="scoreVisible" class="bg-[#0D1117] p-4 rounded-xl border border-[#1F2530] mt-3">
-            <div class="text-gray-400 text-xs mb-1">DeFi Native Usage Score</div>
-
-            <div class="flex items-center gap-3">
-              <div class="text-2xl font-bold text-[#7BA7FF] blur-sm select-none">
-                {{ defiScore }}/100
+                <div class="text-[#3D6FFF] font-semibold select-none">
+                  {{ stats.volume }}
+                </div>
               </div>
 
-              <div :class="['text-xs px-2 py-0.5 rounded-full font-semibold', defiGradeClass]">
-                {{ defiGrade }}
-              </div>
             </div>
 
-            <p class="text-xs text-gray-500 mt-1">
-              Measures how deeply your wallet interacts with DeFi before using Polymarket.
-              Higher DeFi scores significantly boost your PolyScore.
+            <!-- Explanation -->
+            <p class="text-xs text-gray-500 mt-3 leading-relaxed">
+              <span class="text-gray-400 font-medium">What is DeFi Score?</span>
+              It measures how deeply your wallet interacts with DeFi protocols
+              <span class="text-gray-400">(DEXs, bridges, staking, lending)</span>
+              before using Polymarket. Higher DeFi activity significantly boosts your
+              overall PolyScore.
             </p>
+
           </div>
+
+
+
+
+          
 
           <!-- <AirdropQualification
             v-if="scoreVisible"
@@ -404,6 +453,7 @@ const whaleBenchmarks = ref([])
 
 // Reactive Data
 const score = ref(0)
+const username = ref(null)
 const scoreSub = ref('Enter a wallet to analyze on-chain activity.')
 const scoreInterpret = ref('')
 const badgeText = ref('')
@@ -654,6 +704,7 @@ async function generateScore() {
     
     if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
       const rawScore = data.smartMoneyScore
+      username.value = data.username || null
       score.value = Math.round(rawScore)
       const weightedScore = Math.round(
         score.value * 0.6 +
