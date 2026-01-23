@@ -3,7 +3,7 @@
     <!-- HEADER -->
     <div class="mb-4">
       <div class="text-lg font-bold text-white">
-        Polywhaler Airdrop Eligibility
+        Polymarket Airdrop Eligibility
       </div>
       <p class="text-xs sm:text-sm text-gray-400 mt-1">
         Estimated eligibility based on DeFi capital held on Polygon (USDC).
