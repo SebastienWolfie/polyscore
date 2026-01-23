@@ -65,7 +65,7 @@
     <!-- ACTIONABLE GUIDANCE -->
     <div class="mt-4 text-xs sm:text-sm text-gray-400">
       <span class="text-[#7BA7FF] font-semibold">How to improve eligibility:</span>
-      Maintain higher USDC balances on Polygon, increase deposit frequency,
+      Maintain higher USDC volumes on Polygon, increase deposit frequency,
       and sustain activity over time before participating in Polymarket trades.
     </div>
   </div>
