@@ -15,7 +15,7 @@
     <div class="bg-[#11151D] p-4 rounded-lg border border-[#1F2530] mb-4">
       <div class="flex justify-between items-center">
         <div>
-          <div class="text-xs text-gray-400">Your DeFi capital (USDC)</div>
+          <div class="text-xs text-gray-400">Your DeFi volume (USDC)</div>
           <div class="text-2xl font-extrabold text-[#7BA7FF]">
             ${{ formatMoney(balance) }}
           </div>
@@ -39,7 +39,7 @@
       <table class="w-full text-xs sm:text-sm">
         <thead class="bg-[#0A0C10] text-gray-400">
           <tr>
-            <th class="text-left px-3 py-2">USDC Balance</th>
+            <th class="text-left px-3 py-2">USDC Volume</th>
             <th class="text-left px-3 py-2">Eligibility Tier</th>
             <th class="text-left px-3 py-2">Assessment</th>
           </tr>
