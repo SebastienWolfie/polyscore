@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   try {
     const res = await $fetch('https://www.polywhaler.com/api/wallet-trades', {
       params: { wallet, limit: 100 },
-      timeout: 30_000
+      timeout: 8_000
     }).catch(() => null)
 
     if (!res) {
