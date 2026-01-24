@@ -1242,7 +1242,7 @@ const get = defineEventHandler(async (event) => {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; MyNuxtApp/1.0)"
       },
-      timeout: 2e4
+      timeout: 8e3
       // Reduced to 20s to stay under most serverless limits
     });
     if (!res) {

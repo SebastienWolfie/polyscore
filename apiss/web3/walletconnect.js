@@ -9,7 +9,7 @@ import { BrowserProvider, ethers, Contract, formatUnits, parseEther } from 'ethe
 const metadata = {
   name: 'Polyscore',
   description: 'Analyze any Polymarket wallet on Polygon. Track trading performance, risk profile, win rate, volume, and whale activity with real on-chain data.',
-  url: 'http://polyscore.web.app',
+  url: 'http://polyscore.net',
   icons: ['https://avatars.mywebsite.com/']
 }
 

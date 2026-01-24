@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; MyNuxtApp/1.0)'
       },
-      timeout: 20000 // Reduced to 20s to stay under most serverless limits
+      timeout: 8000 // Reduced to 20s to stay under most serverless limits
     })
 
     if (!res) {
