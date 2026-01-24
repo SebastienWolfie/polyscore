@@ -10,11 +10,8 @@ export default defineEventHandler(async (event) => {
   try {
     const res = await $fetch('https://www.polywhaler.com/api/wallet-trades', {
       params: { wallet, limit: 100 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MyNuxtApp/1.0)'
-      },
-      timeout: 8000 // Reduced to 20s to stay under most serverless limits
-    })
+      timeout: 30_000
+    }).catch(() => null)
 
     if (!res) {
       return {
@@ -91,12 +88,6 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (err) {
-    // Check if it's a 404 or a 500 from the external API
-    console.error("External API Error:", err.response?.status, err.message)
-    
-    throw createError({ 
-      statusCode: 502, 
-      message: 'Failed to fetch data from Polywhaler' 
-    })
+    throw createError({ statusCode: 500, message: 'Polyscore error' })
   }
 })

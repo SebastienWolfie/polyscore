@@ -1231,7 +1231,6 @@ const sendVerification_post$1 = /*#__PURE__*/Object.freeze({
 });
 
 const get = defineEventHandler(async (event) => {
-  var _a;
   const { wallet } = getQuery$1(event);
   if (!wallet || typeof wallet !== "string") {
     throw createError({ statusCode: 400, message: "Wallet required" });
@@ -1239,12 +1238,8 @@ const get = defineEventHandler(async (event) => {
   try {
     const res = await $fetch("https://www.polywhaler.com/api/wallet-trades", {
       params: { wallet, limit: 100 },
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; MyNuxtApp/1.0)"
-      },
-      timeout: 8e3
-      // Reduced to 20s to stay under most serverless limits
-    });
+      timeout: 3e4
+    }).catch(() => null);
     if (!res) {
       return {
         wallet,
@@ -1299,11 +1294,7 @@ const get = defineEventHandler(async (event) => {
       }
     };
   } catch (err) {
-    console.error("External API Error:", (_a = err.response) == null ? void 0 : _a.status, err.message);
-    throw createError({
-      statusCode: 502,
-      message: "Failed to fetch data from Polywhaler"
-    });
+    throw createError({ statusCode: 500, message: "Polyscore error" });
   }
 });
 
