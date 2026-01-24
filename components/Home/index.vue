@@ -193,9 +193,6 @@
                 <div class="text-xl sm:text-2xl font-extrabold mb-1">{{ score }} / 100</div>
                 <div class="text-gray-400 text-xs sm:text-sm mb-2">{{ scoreSub }}</div>
 
-                <p class="text-blue-400 font-semibold cursor-pointer text-sm sm:text-base mt-2 inline-block underline"
-                  @click="() => viewFullReportClicked()">See more</p>
-            
 
                 <div class="flex flex-wrap gap-2 mb-2" v-if="badgeText">
                   <div :class="['flex items-center gap-1 text-xs sm:text-sm px-2 py-1 rounded-full font-semibold', badgeClass]">
@@ -205,6 +202,11 @@
                 </div>
 
                 <div class="text-gray-300 text-xs sm:text-sm leading-relaxed">{{ scoreInterpret }}</div>
+
+
+                <p class="text-blue-400 font-semibold cursor-pointer text-sm mt-2 inline-block underline"
+                  @click="() => viewFullReportClicked()">See more</p>
+            
               </div>
 
 
@@ -818,7 +820,7 @@ function updateTierLogic(s) {
   } else if (s >= 35) {
     badgeText.value = 'Lukewarm zone (Mid-Tier)'
     badgeClass.value = 'bg-[rgba(255,180,0,0.16)] border border-[#FFB400] text-[#FEF3C7]'
-    scoreInterpret.value = 'This wallet shows moderate activity.'
+    scoreInterpret.value = 'This wallet shows moderate activity. Check the full on-chain report to see the metrics considered'
     scoreSub.value = 'Good start, but room to grow.'
     tier = 'mid'
   } else {
