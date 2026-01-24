@@ -271,14 +271,11 @@
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
                 <div class="text-gray-400 text-xs mb-1">DeFi Score</div>
                 <div class="flex items-center gap-2">
-                  <div class="text-[#7BA7FF] blur-sm font-semibold select-none">
+                  <div class="text-[#7BA7FF] font-semibold blur-sm select-none">
                     {{ defiScore }}/100
                   </div>
                   <div
-                    :class="[
-                      'text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
-                      defiGradeClass
-                    ]"
+                    :class="['text-[10px] px-1.5 py-0.5 rounded-full font-semibold', defiGradeClass]"
                   >
                     {{ defiGrade }}
                   </div>
@@ -288,28 +285,50 @@
               <!-- Win Rate -->
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
                 <div class="text-gray-400 text-xs mb-1">Win Rate</div>
-                <div class="text-[#3D6FFF] font-semibold blur-sm select-none">
-                  {{ stats.winRate }}
+                <div class="flex items-center gap-2">
+                  <div class="text-[#3D6FFF] font-semibold blur-sm select-none">
+                    {{ stats.winRate }}
+                  </div>
+                  <div
+                    :class="['text-[10px] px-1.5 py-0.5 rounded-full font-semibold', winRateGradeClass]"
+                  >
+                    {{ winRateGrade }}
+                  </div>
                 </div>
               </div>
 
               <!-- Total Trades -->
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
-                <div class="text-gray-400 text-xs mb-1">Total trades</div>
-                <div class="text-[#3D6FFF] font-semibold select-none">
-                  {{ stats.trades }}
+                <div class="text-gray-400 text-xs mb-1">Total Trades</div>
+                <div class="flex items-center gap-2">
+                  <div class="text-[#3D6FFF] font-semibold select-none">
+                    {{ stats.trades }}
+                  </div>
+                  <div
+                    :class="['text-[10px] px-1.5 py-0.5 rounded-full font-semibold', tradesGradeClass]"
+                  >
+                    {{ tradesGrade }}
+                  </div>
                 </div>
               </div>
 
               <!-- Volume -->
               <div class="bg-[#11151D] p-2 rounded-lg border border-[#1F2530]">
                 <div class="text-gray-400 text-xs mb-1">Volume (est.)</div>
-                <div class="text-[#3D6FFF] font-semibold select-none">
-                  {{ stats.volume }}
+                <div class="flex items-center gap-2">
+                  <div class="text-[#3D6FFF] font-semibold select-none">
+                    {{ stats.volume }}
+                  </div>
+                  <div
+                    :class="['text-[10px] px-1.5 py-0.5 rounded-full font-semibold', volumeGradeClass]"
+                  >
+                    {{ volumeGrade }}
+                  </div>
                 </div>
               </div>
 
             </div>
+
 
             <!-- Explanation -->
             <p class="text-xs text-gray-500 mt-3 leading-relaxed">
@@ -860,4 +879,57 @@ function viewFullReportClicked() {
   }
 }
 
+
+
+/* ---------- SHARED GRADE STYLE ---------- */
+const gradeClass = (grade) => {
+  if (grade === 'Good') return 'bg-green-500/15 text-green-400'
+  if (grade === 'Average') return 'bg-yellow-500/15 text-yellow-400'
+  return 'bg-red-500/15 text-red-400'
+}
+
+/* ---------- WIN RATE ---------- */
+const winRateValue = computed(() => {
+  const v = parseFloat(stats.value.winRate)
+  return isNaN(v) ? 0 : v
+})
+
+const winRateGrade = computed(() => {
+  if (winRateValue.value >= 60) return 'Good'
+  if (winRateValue.value >= 40) return 'Average'
+  return 'Poor'
+})
+
+const winRateGradeClass = computed(() =>
+  gradeClass(winRateGrade.value)
+)
+
+/* ---------- TOTAL TRADES ---------- */
+const tradesGrade = computed(() => {
+  const t = Number(stats.value.trades) || 0
+  if (t >= 100) return 'Good'
+  if (t >= 30) return 'Average'
+  return 'Poor'
+})
+
+const tradesGradeClass = computed(() =>
+  gradeClass(tradesGrade.value)
+)
+
+/* ---------- VOLUME ---------- */
+const volumeValue = computed(() => {
+  return Number(
+    String(stats.value.volume).replace(/[^0-9.]/g, '')
+  ) || 0
+})
+
+const volumeGrade = computed(() => {
+  if (volumeValue.value >= 10000) return 'Good'
+  if (volumeValue.value >= 2000) return 'Average'
+  return 'Poor'
+})
+
+const volumeGradeClass = computed(() =>
+  gradeClass(volumeGrade.value)
+)
 </script>
