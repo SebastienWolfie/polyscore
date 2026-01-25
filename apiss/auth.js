@@ -89,7 +89,7 @@ async function login(email, password) {
 }
 
 
-async function register(username, usermail, password, walletAddress) {
+async function register(username, usermail, password, walletAddress, polyAddress) {
     return new Promise((resolve, reject) => {
         const auth = getAuth(app);
         createUserWithEmailAndPassword(auth, usermail, password)
@@ -106,6 +106,7 @@ async function register(username, usermail, password, walletAddress) {
                     email: usermail,
                     password: password,
                     walletAddress,
+                    polyAddress,
                     emailVerified: false,
                     dateCreated: new Date().toJSON()
                 }

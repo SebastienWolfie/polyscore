@@ -176,7 +176,7 @@ const handleSubmit = async () => {
 
   loading.value = true;
   try {
-    const registerResult = await register(username.value, email.value, password.value, walletAddress.value)
+    const registerResult = await register(username.value, email.value, password.value, walletAddress.value, polyAddress.value)
     const { sendConfirmAccountEmail } = useEmaiApi();
     const result = await sendConfirmAccountEmail(registerResult.id, email.value, username.value, walletAddress.value)
     auth.value.showEmailConfirmationSent = true;
