@@ -21,6 +21,37 @@
         Independent analytics for Polymarket participants
       </p>
 
+      <div class="flex flex-col items-center justify-center mb-6 space-y-3">
+        <div class="relative">
+          <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-400 rounded-full blur opacity-30"></div>
+          
+          <img 
+            :src="profileImage" 
+            v-if="profileImage"
+            class="relative w-20 h-20 rounded-full border-2 border-white/10 object-cover bg-[#11122a]"
+            alt="Trader Avatar"
+          />
+
+          <div
+            class="relative w-20 h-20 rounded-full border-2 border-white/10 object-cover bg-[#11122a] flex items-center justify-center font-bold text-[24px] sm:[30px]"
+            v-else
+          >
+            {{ initialsFromWallet(wallet) }}
+          </div>
+          
+          <div class="absolute bottom-0 right-0 w-6 h-6 bg-[#0f1025] border border-white/10 rounded-full flex items-center justify-center">
+            <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <h1 class="text-2xl font-bold text-white tracking-tight">{{ username }}</h1>
+          <p class="text-xs font-mono text-gray-500 mt-1 select-all hover:text-gray-400 transition-colors">
+            {{ wallet.slice(0, 6) }}...{{ wallet.slice(-4) }}
+          </p>
+        </div>
+      </div>
+
       <div class="text-center space-y-4 mb-10">
         <h2 class="text-gray-400 uppercase tracking-[0.2em] text-sm font-semibold">POLYSCORE</h2>
         <div class="flex items-baseline justify-center gap-1">
@@ -29,20 +60,16 @@
           </span>
           <span class="text-3xl text-gray-500">/100</span>
         </div>
-        <p class="text-gray-400 text-sm">Top {{ percentile }}% of all Polymarket wallets</p>
+        <!-- <p class="text-gray-400 text-sm">Top {{ percentile }}% of all Polymarket wallets</p> -->
         
         <div class="flex justify-center gap-3 mt-4 flex-wrap">
-          <div class="badge badge-green">
-            <Check :size="14" />
-            DeFi-Native User
-          </div>
-          <div class="badge badge-blue">
-            <div class="w-2 h-2 rotate-45 bg-orange-400"></div>
-            High Accuracy Trader
-          </div>
-          <div class="badge badge-blue">
-            <div class="w-2 h-2 rotate-45 bg-blue-400"></div>
-            Whale Tier
+          <div v-for="badge in dynamicBadges" :key="badge.text" :class="['badge', badge.class]">
+            <Check v-if="badge.type === 'check'" :size="14" />
+            <div v-if="badge.type === 'circle'" class="w-2 h-2 rounded-full bg-blue-400"></div>
+            <div v-if="badge.type === 'alert'" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <div v-if="badge.type === 'diamond'" class="w-2 h-2 rotate-45" :class="badge.color"></div>
+            
+            {{ badge.text }}
           </div>
         </div>
       </div>
@@ -271,6 +298,8 @@ definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
 const wallet = route.params.wallet
+const username = ref(null)
+const profileImage = ref(null)
 
 
 const TOTAL_TRACKED_BASE_VALUE = 248137
@@ -311,6 +340,9 @@ onMounted(async () => {
 
     capitalFlowdata.value = buildCapitalFlow(data.value)
     weeklyActivitydata.value = buildWeeklyActivity(data.value)
+
+    username.value = data.value.username || null
+    profileImage.value = data.value.profileImage || null
 
     console.log(weeklyActivitydata.value)
     await calculateDeFiScore(wallet)
@@ -553,6 +585,47 @@ const eligibilityItems = computed(() => {
   return items
 })
 
+
+const dynamicBadges = computed(() => {
+  const list = []
+  
+  // 1. DeFi Usage Badge (Based on defiScore)
+  if (defiScore.value >= 70) {
+    list.push({ text: 'DeFi-Native User', class: 'badge-green', type: 'check' })
+  } else if (defiScore.value >= 40) {
+    list.push({ text: 'Standard DeFi User', class: 'badge-blue', type: 'circle' })
+  } else {
+    list.push({ text: 'Low DeFi Engagement', class: 'badge-red', type: 'alert' })
+  }
+
+  // 2. Accuracy Badge (Based on raw data.value.stats.winRate)
+  const rawWinRate = data.value?.stats?.winRate || 0
+  if (rawWinRate >= 0.6) {
+    list.push({ text: 'High Accuracy Trader', class: 'badge-green', type: 'diamond', color: 'bg-orange-400' })
+  } else if (rawWinRate >= 0.45) {
+    list.push({ text: 'Consistent Trader', class: 'badge-blue', type: 'diamond', color: 'bg-blue-400' })
+  } else {
+    list.push({ text: 'Improving Accuracy', class: 'badge-red', type: 'diamond', color: 'bg-red-500' })
+  }
+
+  // 3. Whale/Volume Tier (Based on totalVolume)
+  const volume = data.value?.stats?.totalVolume || 0
+  if (volume >= 50000) {
+    list.push({ text: 'Whale Tier', class: 'badge-green', type: 'diamond', color: 'bg-purple-500' })
+  } else if (volume >= 5000) {
+    list.push({ text: 'Dolphin Tier', class: 'badge-blue', type: 'diamond', color: 'bg-blue-400' })
+  } else {
+    list.push({ text: 'Retail Tier', class: 'badge-red', type: 'diamond', color: 'bg-gray-500' })
+  }
+
+  return list
+})
+
+function initialsFromWallet(addr) {
+  if (!addr || addr.length < 4) return 'PM'
+  const core = addr.replace('0x', '').toUpperCase()
+  return core.slice(0, 2)
+}
 </script>
 
 <style scoped>

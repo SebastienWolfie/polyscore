@@ -3,11 +3,10 @@
     <!-- HEADER -->
     <div class="mb-4">
       <div class="text-lg font-bold text-white">
-        Polymarket Airdrop Eligibility
+        Polymarket Airdrop volume
       </div>
       <p class="text-xs sm:text-sm text-gray-400 mt-1">
-        Estimated eligibility based on DeFi capital held on Polygon (USDC).
-        Final allocations depend on sustained on-chain behavior.
+        Airdrop volume is based on sustained on-chain activity. Using the platform regularly matters more than just wins.
       </p>
     </div>
 
@@ -40,7 +39,7 @@
         <thead class="bg-[#0A0C10] text-gray-400">
           <tr>
             <th class="text-left px-3 py-2">USDC Volume</th>
-            <th class="text-left px-3 py-2">Eligibility Tier</th>
+            <th class="text-left px-3 py-2">volume Tier</th>
             <th class="text-left px-3 py-2">Assessment</th>
           </tr>
         </thead>
@@ -64,9 +63,8 @@
 
     <!-- ACTIONABLE GUIDANCE -->
     <div class="mt-4 text-xs sm:text-sm text-gray-400">
-      <span class="text-[#7BA7FF] font-semibold">How to improve eligibility:</span>
-      Maintain higher USDC volumes on Polygon, increase deposit frequency,
-      and sustain activity over time before participating in Polymarket trades.
+      <span class="text-[#7BA7FF] font-semibold">How to improve volume:</span>
+      Deposit and withdraw USDC regularly through vour DeFi wallet to increase vour DeFi Volume and improve your airdrop eligibility
     </div>
   </div>
 </template>
@@ -81,9 +79,9 @@ const props = defineProps({
 
 const tiers = [
   {
-    min: 20000,
-    label: 'Strong eligibility',
-    range: '≥ $20,000',
+    min: 50000,
+    label: 'Strong DeFi volume',
+    range: '≥ $50,000',
     badgeClass: 'bg-green-500/10 text-green-400',
     description:
       'Wallets in this range demonstrate strong DeFi capital commitment and are well positioned for potential airdrop inclusion.',
@@ -91,29 +89,29 @@ const tiers = [
       'High likelihood if activity is sustained over time.'
   },
   {
-    min: 15000,
-    label: 'Moderate eligibility',
-    range: '$15,000 – $19,999',
+    min: 25000,
+    label: 'Moderate DeFi volume',
+    range: '$25,000 – $50,000',
     badgeClass: 'bg-blue-500/10 text-blue-400',
     description:
-      'Shows meaningful DeFi usage. Additional balance growth or consistency may improve eligibility.',
+      'Shows meaningful DeFi usage. Additional balance growth or consistency may improve volume.',
     tableDescription:
       'Reasonable chance with continued activity.'
   },
   {
-    min: 12000,
-    label: 'Emerging eligibility',
-    range: '$12,000 – $14,999',
+    min: 10000,
+    label: 'Emerging DeFi volume',
+    range: '$10,000 – $25,000',
     badgeClass: 'bg-yellow-500/10 text-yellow-400',
     description:
       'Early-stage qualification. Increased capital or longer holding periods are recommended.',
     tableDescription:
-      'Borderline eligibility; improvement recommended.'
+      'Borderline volume; improvement recommended.'
   },
   {
     min: 0,
-    label: 'Low eligibility',
-    range: '< $12,000',
+    label: 'Low DeFi volume',
+    range: '< $10,000',
     badgeClass: 'bg-red-500/10 text-red-400',
     description:
       'Current DeFi exposure is limited. Increasing capital and usage is required to qualify.',

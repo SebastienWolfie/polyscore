@@ -1286,6 +1286,7 @@ const get = defineEventHandler(async (event) => {
     return {
       wallet,
       username: traderInfo.name || traderInfo.pseudonym || `${wallet.slice(0, 6)}\u2026${wallet.slice(-4)}`,
+      profileImage: traderInfo.icon || traderInfo.image || traderInfo.profileImage || `https://effigy.im/a/${wallet}.svg`,
       smartMoneyScore,
       stats: {
         totalTrades,

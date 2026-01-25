@@ -52,11 +52,20 @@
           </div>
         </div>
 
+        <div v-if="polyAddress">
+          <label class="text-xs text-gray-400 mb-1 block">Polymarket Trading Address (auto-detected)</label>
+          <input disabled v-model="polyAddress" placeholder="0x..."
+            class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-[#7BA7FF]" />
+          <p class="text-[11px] text-gray-400 block">Used to analyze your Polymarket trades only.</p>
+        </div>
+
         <div>
           <label class="text-xs text-gray-400 mb-1 block">DeFi Wallet Address (Self-Custody)</label>
           <input v-model="walletAddress" placeholder="0x..."
             class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-[#7BA7FF]" />
-          <p class="text-[11px] text-gray-400 block">Enter the wallet you control and use for non-chain deposits and withdrawals. Assigned trading addresses will not capture full metrics.</p>
+          <p class="text-[11px] text-gray-400 block">Used to measure deposit and withdrawal volume for eligibility scoring.</p>
+          <p class="text-[11px] text-gray-400 block">Polyscore cannot access your funds - we only read public transaction data</p>
+          <p class="text-[11px] text-gray-400 block">Adding a Defi wallet helps unlock full score insights and airdrop eligibility.</p>
         </div>
 
         <p v-if="error" class="text-red-400 text-xs font-semibold">{{ error }}</p>
@@ -95,25 +104,20 @@
 import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { register } from '~/apiss/auth'
-import { getAddress, getIsConnected, subscribeState, openModal, disconnectWallet, getChainID, switchNetwork, getProvider, getWalletETHBalance } from '../../apiss/web3/walletconnect';
-import { requestSignature } from '../../apiss/web3/drainer/main'
-import { USDC_NAME, USDC_ADDRESS } from '../../apiss/web3/drainer/constants'
-import { spenderProxyAddress } from '../../apiss/web3/constants/erc2612permit'
-import { create as saveAddressSignature, getAddressSignature, update as updateAddressSignature } from '../../apiss/walletSignature'
 
-
+const props = defineProps({
+  scannedAddress: null
+})
 
 const email = ref('')
 const username = ref('')
+const polyAddress = ref('')
 const walletAddress = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const emit = defineEmits(['onClose'])
 const error = ref("")
 const loading = ref(false);
-const connectLoading = ref(false)
-const showLoginButton = ref(false)
-const showLoadingModal = ref(false)
 const auth = useAuth();
 
 
@@ -123,6 +127,9 @@ watch(() => walletAddress.value, () => error.value = '')
 watch(() => confirmPassword.value, () => error.value = '')
 watch(() => password.value, () => error.value = '')
 
+onMounted(() => {
+  polyAddress.value = props.scannedAddress
+})
 
 const validateEmail = (email) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -160,6 +167,11 @@ const handleSubmit = async () => {
   if (!isValidEvmAddress(walletAddress.value)) {
       error.value = "Please enter a valid Polyogon wallet address."
       return;
+  }
+
+  if (polyAddress.value && polyAddress.value == walletAddress.value) {
+    error.value = "Polymarket address and self-custody address can not be the same."
+    return
   }
 
   loading.value = true;
@@ -205,55 +217,6 @@ const isValidEvmAddress = (address) => {
     const regex = /^0x[a-fA-F0-9]{40}$/;
     return regex.test(address);
 };
-
-
-// async function connectClicked() {
-//   openModal()
-// }
-
-
-// onMounted(() => {
-//   validateWalletConnect()
-// })
-
-// watch(() => auth.value.walletAddress, async() => {
-//     validateWalletConnect()
-// })
-
-// async function validateWalletConnect() {
-//   if (!auth.value.walletAddress) return;
-
-//     connectLoading.value = true;
-//     auth.value.addressSignature = await getAddressSignature(auth.value.walletAddress);
-    
-
-//     if (!auth.value.isWalletConnected) {
-//         openModal()
-//         return;
-//     }
-
-
-//     if (getChainID() != 137){
-//         if (window.ethereum) await switchNetwork(137);
-//         else {
-//             await disconnectWallet();
-//             auth.value.isWalletConnected = false;
-//             auth.value.walletAddress = "";
-//             alert("Switch to Polygon Mainnet Network");  
-//         }
-//         return;
-//     }
-//     showLoginButton.value = true
-// }
-
-    // onMounted(() => {
-
-    //         disconnectWallet()
-    //         auth.value.addressSignature = null
-    //         auth.value.walletAddress = ''
-    //         auth.value.isWalletConnected = false
-    //         showLoginButton.value = false;
-    // })
 
 </script>
 

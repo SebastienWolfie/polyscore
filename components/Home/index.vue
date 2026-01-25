@@ -245,8 +245,14 @@
 
             <!-- Header -->
             <div class="flex items-center gap-3 mb-4">
+              <img
+                class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7BA7FF] to-[#3D6FFF] flex items-center justify-center font-bold text-sm sm:text-base"
+                v-if="profileImage"
+                :src="profileImage"
+              />
               <div
                 class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#7BA7FF] to-[#3D6FFF] flex items-center justify-center font-bold text-sm sm:text-base"
+                v-else
               >
                 {{ initialsFromWallet(wallet) }}
               </div>
@@ -415,6 +421,7 @@
 
     <RegisterModal v-if="showSignup"
                    @onClose="showSignup=false"
+                   :scanned-address="wallet"
                    @signInClicked="() => {
                     showSignup = false
                     showLogin = true
@@ -479,6 +486,7 @@ const whaleBenchmarks = ref([])
 // Reactive Data
 const score = ref(0)
 const username = ref(null)
+const profileImage = ref(null)
 const scoreSub = ref('Enter a wallet to analyze on-chain activity.')
 const scoreInterpret = ref('')
 const badgeText = ref('')
@@ -549,6 +557,8 @@ function calculateDeFiGrade(score) {
 watch(() => wallet.value, () => {
     scoreVisible.value = false
     score.value = 0
+    username.value = null
+    profileImage.value = null
     // Reset ring to full
     offset.value = circumference
 })
@@ -730,6 +740,7 @@ async function generateScore() {
     if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
       const rawScore = data.smartMoneyScore
       username.value = data.username || null
+      profileImage.value = data.profileImage || null
       score.value = Math.round(rawScore)
       const weightedScore = Math.round(
         score.value * 0.6 +
