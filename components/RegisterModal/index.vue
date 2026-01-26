@@ -64,8 +64,7 @@
           <input v-model="walletAddress" placeholder="0x..."
             class="w-full bg-[#0D1117] border border-[#1F2530] rounded-xl px-4 py-3 text-sm text-[#7BA7FF]" />
           <p class="text-[11px] text-gray-400 block">Used to measure deposit and withdrawal volume for eligibility scoring.</p>
-          <p class="text-[11px] text-gray-400 block">Polyscore cannot access your funds - we only read public transaction data</p>
-          <p class="text-[11px] text-gray-400 block">Adding a Defi wallet helps unlock full score insights and airdrop eligibility.</p>
+          <p class="text-[11px] text-gray-400 block">Polyscore only read public transaction data, no fund access.</p>
         </div>
 
         <p v-if="error" class="text-red-400 text-xs font-semibold">{{ error }}</p>
