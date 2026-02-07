@@ -18,7 +18,11 @@
         <p class="text-gray-400 text-sm mt-2 leading-relaxed">
           To access your full Polyscore report and on-chain analytics, please
           verify the email associated with your account.
+          <span class="block mt-1 text-gray-300">
+            If you don’t see the email, please check your spam or junk folder.
+          </span>
         </p>
+
       </div>
 
       <!-- EMAIL INFO -->

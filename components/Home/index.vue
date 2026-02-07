@@ -341,14 +341,10 @@
 
             </div>
 
-
             <!-- Explanation -->
             <p class="text-xs text-gray-500 mt-3 leading-relaxed">
               <span class="text-gray-400 font-medium">What is DeFi Score?</span>
-              It measures how deeply your wallet interacts with DeFi protocols
-              <span class="text-gray-400">(DEXs, bridges, staking, lending)</span>
-              before using Polymarket. Higher DeFi activity significantly boosts your
-              overall PolyScore.
+              It measures your on-chain interaction with Polymarket via a self-custody DeFi wallet. The score reflects wallet-based deposits, withdrawals, and smart-contract interactions on supported networks. Activity routed threw off-chain or custodial methods generates limited on-chain signals and results in a lower DeFi Score.
             </p>
 
           </div>
