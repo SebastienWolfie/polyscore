@@ -344,8 +344,13 @@ onMounted(async () => {
     capitalFlowdata.value = buildCapitalFlow(data.value)
     weeklyActivitydata.value = buildWeeklyActivity(data.value)
 
-    username.value = data.value.username || null
-    profileImage.value = data.value.profileImage || null
+    if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
+      username.value = data.value.username || null
+      profileImage.value = data.value.profileImage || null
+    }
+
+    // username.value = data.value.username || null
+    // profileImage.value = data.value.profileImage || null
 
     console.log(weeklyActivitydata.value)
     await calculateDeFiScore(wallet)

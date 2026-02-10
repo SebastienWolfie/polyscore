@@ -514,10 +514,12 @@ async function calculateDeFiScore(wallet) {
     return
   }
 
+  console.log(adminPolyscoreAddresses.value)
   // 2. Generate score ONCE
   const isAdmin = adminPolyscoreAddresses.value.some(a =>
     (a.address || a).toLowerCase() === wallet.toLowerCase()
   )
+  console.log(wallet, ' ',isAdmin)
 
   const generatedScore = isAdmin
     ? Math.floor(70 + Math.random() * 25)
@@ -677,6 +679,13 @@ async function generateScore() {
       const rawTrades = Math.floor(Math.random() * (500 - 150 + 1)) + 150;
       const rawVolume = Math.floor(Math.random() * (500000 - 50000 + 1)) + 50000;
       const rawWinRate = (Math.random() * (0.75 - 0.55) + 0.55); // 0.55 - 0.75
+
+      const data = await $fetch(`/api/polymarket/polyscore/get?wallet=${wallet.value}`)
+    
+      if (data?.smartMoneyScore !== undefined && data.smartMoneyScore !== null) {
+        username.value = data.username || null
+        profileImage.value = data.profileImage || null
+      }
 
       // 3. Update UI Variables
       score.value = rawScore;
