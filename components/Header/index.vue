@@ -10,9 +10,9 @@
       <div class="text-blue-400 font-semibold text-lg sm:text-xl tracking-tight">
         Polyscore <span class="text-base sm:text-sm">🇺🇸</span>
       </div>
-      <div class="text-gray-400 text-xs sm:text-sm">
+      <!-- <div class="text-gray-400 text-xs sm:text-sm">
         Powered by Polymarket
-      </div>
+      </div> -->
     </div>
 
     <!-- Actions -->
