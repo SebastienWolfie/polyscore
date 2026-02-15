@@ -6,8 +6,12 @@ const JWT_SECRET = 'uybybygybgyuguvderderssresxxtcdyubbynnlumonbguvrv65r7t';
 
 export default defineEventHandler(async (event) => {
     if (event.node.req.method === "OPTIONS") {
+      setHeader(event, "Access-Control-Allow-Origin", "*"); // Replace * with your frontend in prod
+      setHeader(event, "Access-Control-Allow-Methods", "POST,OPTIONS");
+      setHeader(event, "Access-Control-Allow-Headers", "Content-Type");
       return "";
     }
+
   try {
     const body = await readBody(event);
     const { id, email, walletAddress, username } = body;
