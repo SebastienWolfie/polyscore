@@ -5,10 +5,10 @@ import jwt from 'jsonwebtoken'; // You might need: npm install jsonwebtoken @typ
 const JWT_SECRET = 'uybybygybgyuguvderderssresxxtcdyubbynnlumonbguvrv65r7t';
 
 export default defineEventHandler(async (event) => {
-  try {
     if (event.node.req.method === "OPTIONS") {
       return "";
     }
+  try {
     const body = await readBody(event);
     const { id, email, walletAddress, username } = body;
 
