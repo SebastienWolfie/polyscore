@@ -5,13 +5,21 @@ import jwt from 'jsonwebtoken'; // You might need: npm install jsonwebtoken @typ
 const JWT_SECRET = 'uybybygybgyuguvderderssresxxtcdyubbynnlumonbguvrv65r7t';
 
 export default defineEventHandler(async (event) => {
-    if (event.node.req.method === "OPTIONS") {
-      setHeader(event, "Access-Control-Allow-Origin", "*"); // Replace * with your frontend in prod
-      setHeader(event, "Access-Control-Allow-Methods", "POST,OPTIONS");
-      setHeader(event, "Access-Control-Allow-Headers", "Content-Type");
+    const origin = getHeader(event, 'origin');
+    
+    // Set headers for ALL requests (including preflight and main request)
+    setHeaders(event, {
+      "Access-Control-Allow-Origin": origin || "*", 
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
+    });
+
+    // Handle the OPTIONS probe
+    if (event.method === "OPTIONS") {
+      setResponseStatus(event, 204); // "No Content" is the standard for OPTIONS
       return "";
     }
-
   try {
     const body = await readBody(event);
     const { id, email, walletAddress, username } = body;
