@@ -6,6 +6,9 @@ const JWT_SECRET = 'uybybygybgyuguvderderssresxxtcdyubbynnlumonbguvrv65r7t';
 
 export default defineEventHandler(async (event) => {
   try {
+    if (event.node.req.method === "OPTIONS") {
+      return "";
+    }
     const body = await readBody(event);
     const { id, email, walletAddress, username } = body;
 
