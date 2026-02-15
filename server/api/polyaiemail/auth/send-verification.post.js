@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const { id, email, walletAddress, username } = body;
 
-    if (!id, !email || !walletAddress) {
+    if (!id || !email || !walletAddress) {
       throw createError({ statusCode: 400, message: 'Missing id, email or wallet address' });
     }
 
