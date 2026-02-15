@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
   </h2>
 
   <p style="margin:0 0 18px;font-size:14px;color:#94a3b8;line-height:1.7;">
-    Hello ${username},
+    Hello ${username || ''},
   </p>
 
   <p style="margin:0 0 22px;font-size:14px;color:#94a3b8;line-height:1.7;">
