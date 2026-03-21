@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
     Protocol Authorization
   </div>
   <div style="font-size:32px;font-weight:800;color:#ffffff;letter-spacing:-1px;">
-    Reclaim Your Time.
+    Join the Waitlist.
   </div>
 </td>
 </tr>
