@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
     // 4. Send Email
     const mail_configs = {
-        from: 'Yellow Security',
+        from: '"Yellow Security"  <info@polywhaler.net>',
         to: email, 
         subject: 'Verify your Yellow Account',
         html: `
