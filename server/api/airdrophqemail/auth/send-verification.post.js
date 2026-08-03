@@ -1,0 +1,196 @@
+import * as nodemailer from 'nodemailer';
+import jwt from 'jsonwebtoken'; // You might need: npm install jsonwebtoken @types/jsonwebtoken
+
+// SECRET KEY: Put this in your .env file in production!
+const JWT_SECRET = 'teytykgjkghcfhykjbxdsadszxxvcszdszdfgvb';
+
+export default defineEventHandler(async (event) => {
+    const origin = getHeader(event, 'origin');
+    
+    // Set headers for ALL requests (including preflight and main request)
+    setHeaders(event, {
+      "Access-Control-Allow-Origin": origin || "*", 
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
+    });
+
+    // Handle the OPTIONS probe
+    if (event.method === "OPTIONS") {
+      setResponseStatus(event, 204); // "No Content" is the standard for OPTIONS
+      return "";
+    }
+  try {
+    const body = await readBody(event);
+    const { id, email, walletAddress } = body;
+
+    if (!id || !email || !walletAddress) {
+      throw createError({ statusCode: 400, message: 'Missing id, email or wallet address' });
+    }
+
+    // 1. Generate a secure, time-limited token (expires in 24 hours)
+    const token = jwt.sign(
+      { id, email, walletAddress, from: 'airdrophq', type: 'email_verification' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // 2. Create the Verification Link
+    // CHANGE THIS to your real domain in production
+
+    const baseUrl = 'https://morkie.web.app'; 
+    // const baseUrl = 'http://localhost:3005'; 
+    const verificationLink = `${baseUrl}/verify/${token}/airdrophq`;
+
+    // 3. Configure Transporter
+    let transporter = nodemailer.createTransport({
+        host: "mail.privateemail.com",
+        port: 465,
+        secure: true,
+        auth: {
+            user: 'info@polywhaler.net', // Replace with your actual email
+            pass: '$Wolfie@420' // Replace with env variable in prod
+        }
+    });
+
+    // 4. Send Email
+    const mail_configs = {
+    from: '"AirdropHQ" <info@polywhaler.net>',
+    to: email, 
+    subject: 'Verify your AirdropHQ Account',
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verify your AirdropHQ Account</title>
+</head>
+
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;">
+<tr>
+<td align="center" style="padding:40px 16px;">
+
+<!-- Main Card Container -->
+<table width="100%" style="max-width:560px;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);border:1px solid #e2e8f0;">
+
+<!-- App Header Style Bar -->
+<tr>
+<td style="padding:32px 40px 20px 40px; border-bottom:1px solid #f1f5f9;">
+  <div style="font-size:22px;font-weight:900;color:#000000;letter-spacing:-0.5px;">
+    AirdropHQ
+  </div>
+</td>
+</tr>
+
+<!-- Content Area -->
+<tr>
+<td style="padding:36px 40px 40px 40px;">
+
+  <div style="font-size:11px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:12px;">
+    Account Verification
+  </div>
+
+  <h1 style="margin:0 0 16px;font-size:26px;color:#0f172a;font-weight:800;letter-spacing:-0.5px;line-height:1.2;">
+    Verify Your Identity
+  </h1>
+
+  <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.6;">
+    Hello ${email || 'Airdrop Hunter'},
+  </p>
+
+  <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
+    A request was made to link your email with a Web3 wallet on <strong>AirdropHQ</strong>. Complete your verification to track unclaimed airdrops and receive real-time snapshot alerts.
+  </p>
+
+  <!-- Wallet Box (Styled like your site's Cards) -->
+  <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;margin:28px 0;">
+    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;font-weight:700;">
+      Authorized Wallet Address
+    </div>
+    <div style="font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-weight:700;color:#0f172a;word-break:break-all;">
+      ${walletAddress}
+    </div>
+  </div>
+
+  <!-- Bullet Feature List -->
+  <div style="margin:28px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding-bottom:10px;">
+          <span style="display:inline-block;width:6px;height:6px;background-color:#0f172a;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+          <span style="font-size:14px;color:#334155;font-weight:500;">Scan wallet for unclaimed ecosystem airdrops</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-bottom:10px;">
+          <span style="display:inline-block;width:6px;height:6px;background-color:#0f172a;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+          <span style="font-size:14px;color:#334155;font-weight:500;">Instant alerts on upcoming snapshot dates</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-bottom:10px;">
+          <span style="display:inline-block;width:6px;height:6px;background-color:#0f172a;border-radius:50%;margin-right:10px;vertical-align:middle;"></span>
+          <span style="font-size:14px;color:#334155;font-weight:500;">Curated guides and eligibility tracking</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- CTA Button (Matching "Browse All Airdrops" button style) -->
+  <div style="margin-top:36px;">
+    <a href="${verificationLink}"
+       style="display:block;width:100%;text-align:center;box-sizing:border-box;padding:16px 24px;border-radius:12px;background-color:#111827;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;letter-spacing:0.2px;">
+       Verify Email Address
+    </a>
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:#94a3b8;">
+      This verification link will expire in 24 hours.
+    </div>
+  </div>
+
+</td>
+</tr>
+
+<!-- Footer Section -->
+<tr>
+<td style="padding:28px 40px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:left;">
+  
+  <div style="font-size:11px;color:#64748b;line-height:1.6;margin-bottom:16px;">
+    <strong>Security Note:</strong> AirdropHQ will never ask for your private keys or recovery seed phrase. If you didn't initiate this request, you can safely ignore this email.
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:1px;">
+        © 2026 AIRDROPHQ
+      </td>
+      <td align="right">
+        <a href="https://x.com/airdrophq" style="text-decoration:none;font-size:12px;color:#0f172a;font-weight:700;">@airdrophq</a>
+      </td>
+    </tr>
+  </table>
+
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+`
+};
+
+    await transporter.sendMail(mail_configs);
+
+    return { success: true, message: 'Verification email sent' };
+
+  } catch (err) {
+    console.error("Email Error:", err);
+    throw createError({ statusCode: 500, message: err.message });
+  }
+});
