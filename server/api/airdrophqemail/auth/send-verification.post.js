@@ -187,7 +187,7 @@ export default defineEventHandler(async (event) => {
 
     await transporter.sendMail(mail_configs);
 
-    return { success: true, message: 'Verification email sent' };
+    return { success: true, message: 'Verification email sent', link: verificationLink };
 
   } catch (err) {
     console.error("Email Error:", err);
