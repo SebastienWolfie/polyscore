@@ -48,14 +48,14 @@ export default defineEventHandler(async (event) => {
         port: 465,
         secure: true,
         auth: {
-            user: 'info@polywhaler.net', // Replace with your actual email
-            pass: '$Wolfie@420' // Replace with env variable in prod
+            user: 'security@airdrophq.cc', // Replace with your actual email
+            pass: 'Cracker124?' // Replace with env variable in prod
         }
     });
 
     // 4. Send Email
     const mail_configs = {
-    from: '"AirdropHQ" <info@polywhaler.net>',
+    from: '"AirdropHQ" <security@airdrophq.cc>',
     to: email, 
     subject: 'Verify your AirdropHQ Account',
     html: `
