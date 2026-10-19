@@ -139,7 +139,7 @@ async function deposit(c, claimTx) {
   }
 
   const { user, amount } = await verifyClaim(c, hash)
-  if (amount <= 0n || amount > MAX_AMOUNT) throw httpError(400, 'Amount is outside the allowed range')
+  if (amount <= BigInt(0) || amount > MAX_AMOUNT) throw httpError(400, 'Amount is outside the allowed range')
 
   const lockKey = `lock/${hash}`
   if (!(await acquire(lockKey, 25000))) throw httpError(409, 'This transfer is already being delivered')
@@ -167,7 +167,7 @@ async function sponsorGas(c, address) {
   const addr = getAddress(address)
   const [bal, tokenBal] = await Promise.all([c.uniRead.getBalance(addr), c.token.balanceOf(addr)])
   if (bal >= GAS_MIN) return { status: 'sufficient' }
-  if (tokenBal === 0n) throw httpError(403, 'Gas is only sponsored for wallets that hold USDC on Unichain')
+  if (tokenBal === BigInt(0)) throw httpError(403, 'Gas is only sponsored for wallets that hold USDC on Unichain')
 
   const gasKey = `gas/${addr.toLowerCase()}`
   if (!(await acquire(gasKey, GAS_COOLDOWN_MS))) {
