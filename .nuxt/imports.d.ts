@@ -34,5 +34,4 @@ export { getWindowDimensions } from '../utils/Dimensions';
 export { purifyNumber, purifyDecimal, onlyForCurrency, onlyForNumbers } from '../utils/DomPurify';
 export { formatMoney, getDecimalCount, removeLastDecimal } from '../utils/Math';
 export { default as PubSub } from '../utils/PubSub';
-export { useNuxtDevTools } from '../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';
 export { definePageMeta } from '../node_modules/nuxt/dist/pages/runtime/composables';

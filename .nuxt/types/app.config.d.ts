@@ -5,7 +5,7 @@ import cfg0 from "/Users/icon/ico/polyscore/app.config"
 
 declare const inlineConfig = {
   "nuxt": {
-    "buildId": "dev"
+    "buildId": "fca0e9c1-807e-48ad-8007-14161e656b9d"
   }
 }
 type ResolvedAppConfig = Defu<typeof inlineConfig, [typeof cfg0]>

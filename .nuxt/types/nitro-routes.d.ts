@@ -3,14 +3,32 @@ import type { Serialize, Simplify } from 'nitropack'
 declare module 'nitropack' {
   type Awaited<T> = T extends PromiseLike<infer U> ? Awaited<U> : T
   interface InternalApi {
+    '/api/airdrophqemail/auth/confirm-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/airdrophqemail/auth/confirm-verification.post').default>>>>
+    }
+    '/api/airdrophqemail/auth/send-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/airdrophqemail/auth/send-verification.post').default>>>>
+    }
     '/api/email/auth/confirm-verification': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/email/auth/confirm-verification.post').default>>>>
     }
     '/api/email/auth/send-verification': {
       'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/email/auth/send-verification.post').default>>>>
     }
+    '/api/polyaiemail/auth/confirm-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/polyaiemail/auth/confirm-verification.post').default>>>>
+    }
+    '/api/polyaiemail/auth/send-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/polyaiemail/auth/send-verification.post').default>>>>
+    }
     '/api/polymarket/polyscore/get': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/polymarket/polyscore/get').default>>>>
+    }
+    '/api/yellowproemail/auth/confirm-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/yellowproemail/auth/confirm-verification.post').default>>>>
+    }
+    '/api/yellowproemail/auth/send-verification': {
+      'post': Simplify<Serialize<Awaited<ReturnType<typeof import('../../server/api/yellowproemail/auth/send-verification.post').default>>>>
     }
     '/__nuxt_error': {
       'default': Simplify<Serialize<Awaited<ReturnType<typeof import('../../node_modules/nuxt/dist/core/runtime/nitro/renderer').default>>>>
