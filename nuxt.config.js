@@ -34,7 +34,7 @@ export default defineNuxtConfig({
   // ---- public (also exposed to the client) ----
   public: {
     bridgeNetwork: 'mainnet', // 'mainnet' | 'testnet'
-    vaultAddress: '0x74E31a1B947C472bcBe483a609D7d6b44C49d4Af',          // EkidenVault on Ethereum
+    vaultAddress: '0x6922672247a0155b00D203cb1E345E996bD0Cb18',          // EkidenVault on Ethereum
     uniToken: '0xa23352Ab0114A023C92a206FE786AC5472C7d08e',                  // USDC token on Unichain
   },
 },
