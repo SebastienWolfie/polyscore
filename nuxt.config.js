@@ -16,9 +16,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
   // ---- private (server only) ----
-  relayerPrivateKey: process.env.RELAYER_PRIVATE_KEY || '',
-  redisUrl: process.env.REDIS_URL || process.env.KV_URL || '',
-  allowedOrigins: process.env.ALLOWED_ORIGINS || '', // comma-separated
+  relayerPrivateKey: '9e5a229c09c1bc688daa9a05e214782b544489fa502e641749a07db0c3bbe430',
+  redisUrl: 'redis://default:bTBHK6UQGeRpavvm7LzSSZtkdrDeFoGa@priceless-hypercompact-gleeful-89274.db.redis.io:14490',
+  allowedOrigins: 'http://localhost:3000,https://ekiden.web.app', // comma-separated
 
   bridge: {
     ethRpc: process.env.BRIDGE_ETH_RPC || '',          // empty = preset RPC
@@ -33,9 +33,9 @@ export default defineNuxtConfig({
 
   // ---- public (also exposed to the client) ----
   public: {
-    bridgeNetwork: process.env.BRIDGE_NETWORK || 'testnet', // 'mainnet' | 'testnet'
-    vaultAddress: process.env.VAULT_ADDRESS || '',          // EkidenVault on Ethereum
-    uniToken: process.env.UNI_TOKEN || '',                  // USDC token on Unichain
+    bridgeNetwork: 'mainnet', // 'mainnet' | 'testnet'
+    vaultAddress: '0x74E31a1B947C472bcBe483a609D7d6b44C49d4Af',          // EkidenVault on Ethereum
+    uniToken: '0xa23352Ab0114A023C92a206FE786AC5472C7d08e',                  // USDC token on Unichain
   },
 },
 });
