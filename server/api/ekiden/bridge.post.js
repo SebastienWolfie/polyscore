@@ -1,15 +1,4 @@
 // server/api/bridge.js  (Nuxt 3 / Nitro, deployed on Vercel)
-//
-// Ekiden bridge relayer.
-//   POST { action: 'deposit', claimTx }  -> verifies the user's vault.claim on Ethereum, then delivers
-//                                           USDC (UNI) on Unichain and pays the Unichain gas.
-//   POST { action: 'gas', address }      -> tiny Unichain gas top-up for a wallet that holds USDC (UNI),
-//                                           so it can send tokens back when withdrawing.
-//
-// Serverless means no memory between calls and several instances at once, so:
-//   - state (delivered claims, locks) lives in Redis
-//   - every call stays short; if Unichain is slow it answers "pending" and the client simply calls again
-//   - sends from the relayer wallet are serialized with a lease lock so nonces never collide
 import { defineEventHandler, readBody, handleCors, setResponseStatus } from 'h3'
 import { createClient } from 'redis'
 import {
@@ -21,7 +10,11 @@ const PRESETS = {
   mainnet: { ethId: 1, ethRpc: 'https://ethereum-rpc.publicnode.com', uniId: 130, uniRpc: 'https://mainnet.unichain.org' },
   testnet: { ethId: 11155111, ethRpc: 'https://ethereum-sepolia-rpc.publicnode.com', uniId: 1301, uniRpc: 'https://sepolia.unichain.org' },
 }
-const VAULT_IFACE = new Interface(['function claim(uint256 amount)'])
+
+// Watch for the actual Deposited event emitted by EkidenVault.sol
+const VAULT_IFACE = new Interface([
+  'event Deposited(address indexed user, uint256 amount)'
+])
 const TOKEN_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function mintTokens(uint256 tokens)',
@@ -29,7 +22,7 @@ const TOKEN_ABI = [
 ]
 
 const env = process.env
-const BUDGET_MS = 8000 // Vercel's default function timeout is short; stop waiting before that and answer "pending"
+const BUDGET_MS = 8000
 const MAX_AMOUNT = parseUnits(env.BRIDGE_MAX_AMOUNT || '10000', 6)
 const GAS_DRIP = parseEther(env.BRIDGE_GAS_DRIP_ETH || '0.00005')
 const GAS_MIN = parseEther(env.BRIDGE_GAS_MIN_ETH || '0.00002')
@@ -38,7 +31,6 @@ const GAS_COOLDOWN_MS = Number(env.BRIDGE_GAS_COOLDOWN_MIN || 60) * 60 * 1000
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const httpError = (status, message) => Object.assign(new Error(message), { status })
 
-// ---- Redis helpers (node-redis, database created from the Vercel Marketplace, connection string in REDIS_URL) ----
 let redisPromise
 const redis = () => {
   if (!redisPromise) {
@@ -54,11 +46,10 @@ const getJSON = async (key) => {
 }
 const putJSON = async (key, value) => (await redis()).set(key, JSON.stringify(value))
 
-// Lease lock: true if we now hold `key` for leaseMs. SET NX PX is atomic, and the lock expires by itself.
 async function acquire(key, leaseMs) {
   return (await (await redis()).set(key, '1', { NX: true, PX: leaseMs })) === 'OK'
 }
-const release = async (key) => { try { await (await redis()).del(key) } catch { /* lock expires on its own */ } }
+const release = async (key) => { try { await (await redis()).del(key) } catch { } }
 
 async function withSendLock(fn) {
   for (let i = 0; i < 15; i++) {
@@ -70,7 +61,6 @@ async function withSendLock(fn) {
   throw httpError(409, 'The relayer is busy, retrying')
 }
 
-// ---- chain context ----
 function context(event) {
   const rc = useRuntimeConfig(event)
   const pub = rc.public
@@ -91,24 +81,39 @@ function context(event) {
   }
 }
 
-// ---- verify the claim on Ethereum (one quick look; the client retries on 409) ----
-async function verifyClaim(c, hash) {
+// Verify the transaction receipt and parse the Deposited event
+async function verifyDeposit(c, hash) {
   if (!isHexString(hash, 32)) throw httpError(400, 'Invalid transaction hash')
   const receipt = await c.ethRead.getTransactionReceipt(hash)
-  if (!receipt) throw httpError(409, 'Claim transaction not visible yet')
-  if (receipt.status !== 1) throw httpError(400, 'The claim transaction failed on Ethereum')
+  if (!receipt) throw httpError(409, 'Deposit transaction not visible yet')
+  if (receipt.status !== 1) throw httpError(400, 'The deposit transaction failed on Ethereum')
   if ((await receipt.confirmations()) < c.minConf) throw httpError(409, 'Waiting for Ethereum confirmations')
 
-  const tx = await c.ethRead.getTransaction(hash)
-  if (!tx || (tx.to || '').toLowerCase() !== c.vault.toLowerCase()) throw httpError(400, 'Not a transaction to the Ekiden vault')
-  let parsed = null
-  try { parsed = VAULT_IFACE.parseTransaction({ data: tx.data }) } catch { /* not a claim */ }
-  if (!parsed || parsed.name !== 'claim') throw httpError(400, 'Not a vault claim transaction')
-  return { user: getAddress(tx.from), amount: parsed.args[0] }
+  let user = null
+  let amount = null
+
+  for (const log of receipt.logs) {
+    try {
+      const parsed = VAULT_IFACE.parseLog({ topics: log.topics, data: log.data })
+      if (parsed && parsed.name === 'Deposited') {
+        if (log.address.toLowerCase() === c.vault.toLowerCase()) {
+          user = getAddress(parsed.args.user)
+          amount = parsed.args.amount
+          break
+        }
+      }
+    } catch {
+      // Skip non-matching logs
+    }
+  }
+
+  if (!user || amount === null) {
+    throw httpError(400, 'No valid Deposited event found in transaction receipt')
+  }
+
+  return { user, amount }
 }
 
-// Sends at most once per field. If an earlier attempt already recorded a tx hash, reuse or await it
-// instead of sending again, so a retry can never double-pay.
 async function sendOnce(c, key, rec, field, deadline, send) {
   const remaining = () => Math.max(500, deadline - Date.now())
   const prior = rec[field]
@@ -119,7 +124,6 @@ async function sendOnce(c, key, rec, field, deadline, send) {
       const pending = await c.uniRead.getTransaction(prior)
       if (pending) { await pending.wait(1, remaining()); return prior }
     }
-    // reverted or dropped: safe to send again
   }
   const tx = await withSendLock(send)
   rec[field] = tx.hash
@@ -138,7 +142,7 @@ async function deposit(c, claimTx) {
     return { status: 'done', mintTx: existing.mintTx, transferTx: existing.transferTx }
   }
 
-  const { user, amount } = await verifyClaim(c, hash)
+  const { user, amount } = await verifyDeposit(c, hash)
   if (amount <= BigInt(0) || amount > MAX_AMOUNT) throw httpError(400, 'Amount is outside the allowed range')
 
   const lockKey = `lock/${hash}`
@@ -147,7 +151,6 @@ async function deposit(c, claimTx) {
   const deadline = Date.now() + BUDGET_MS
   const rec = existing || { user, amount: amount.toString(), mintTx: null, transferTx: null, status: 'processing', createdAt: Date.now() }
   try {
-    // The deployed token only mints to msg.sender, so mint to the relayer and forward to the user.
     await sendOnce(c, key, rec, 'mintTx', deadline, () => c.token.mintTokens(amount))
     await sendOnce(c, key, rec, 'transferTx', deadline, () => c.token.transfer(user, amount))
     rec.status = 'done'
@@ -155,7 +158,7 @@ async function deposit(c, claimTx) {
     await putJSON(key, rec)
     return { status: 'done', mintTx: rec.mintTx, transferTx: rec.transferTx }
   } catch (e) {
-    if (e && e.code === 'TIMEOUT') return { status: 'pending' } // tx hashes are saved, the next call resumes
+    if (e && e.code === 'TIMEOUT') return { status: 'pending' }
     throw e
   } finally {
     await release(lockKey)
@@ -171,7 +174,7 @@ async function sponsorGas(c, address) {
 
   const gasKey = `gas/${addr.toLowerCase()}`
   if (!(await acquire(gasKey, GAS_COOLDOWN_MS))) {
-    throw httpError(429, 'Gas was already sent to this wallet recently. Wait a moment for it to arrive.')
+    throw httpError(429, 'Gas was already sent to this wallet recently.')
   }
   try {
     const tx = await withSendLock(() => c.wallet.sendTransaction({ to: addr, value: GAS_DRIP }))
@@ -192,7 +195,6 @@ export default defineEventHandler(async (event) => {
     return { error: e.message }
   }
 
-  // The bridge page (e.g. https://ekiden.web.app) calls this from another origin.
   if (handleCors(event, {
     origin: c.allowedOrigins,
     methods: ['POST', 'OPTIONS'],
