@@ -1,4 +1,5 @@
-// server/api/bridge.js  (Nuxt 3 / Nitro, deployed on Vercel)
+// server/api/bridge.post.js  (Nuxt 3 / Nitro, deployed on Vercel)
+// All settings come from runtimeConfig (nuxt.config.js) - no process.env here.
 import { defineEventHandler, readBody, handleCors, setResponseStatus } from 'h3'
 import { createClient } from 'redis'
 import {
@@ -11,6 +12,7 @@ const PRESETS = {
   testnet: { ethId: 11155111, ethRpc: 'https://ethereum-sepolia-rpc.publicnode.com', uniId: 1301, uniRpc: 'https://sepolia.unichain.org' },
 }
 
+// Watch for the actual Deposited event emitted by EkidenVault.sol
 const VAULT_IFACE = new Interface([
   'event Deposited(address indexed user, uint256 amount)'
 ])
@@ -20,20 +22,15 @@ const TOKEN_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
 ]
 
-const env = process.env
-const BUDGET_MS = 8000
-const MAX_AMOUNT = parseUnits(env.BRIDGE_MAX_AMOUNT || '10000', 6)
-const GAS_DRIP = parseEther(env.BRIDGE_GAS_DRIP_ETH || '0.00005')
-const GAS_MIN = parseEther(env.BRIDGE_GAS_MIN_ETH || '0.00002')
-const GAS_COOLDOWN_MS = Number(env.BRIDGE_GAS_COOLDOWN_MIN || 60) * 60 * 1000
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const httpError = (status, message) => Object.assign(new Error(message), { status })
 
+// ---- Redis (url is injected from config on first use) ----
 let redisPromise
+let redisUrl
 const redis = () => {
   if (!redisPromise) {
-    const client = createClient({ url: env.REDIS_URL || env.KV_URL })
+    const client = createClient({ url: redisUrl })
     client.on('error', (e) => console.error('redis error', e))
     redisPromise = client.connect().then(() => client).catch((e) => { redisPromise = null; throw e })
   }
@@ -50,36 +47,77 @@ async function acquire(key, leaseMs) {
 }
 const release = async (key) => { try { await (await redis()).del(key) } catch { } }
 
-async function withSendLock(fn) {
+// Public RPCs sit behind load balancers, so 'pending' nonce can come from a lagging node.
+// We keep our own next-nonce in Redis (short TTL so a dropped tx can't leave a permanent gap)
+// and use whichever is higher: chain vs. our counter.
+const NONCE_TTL_S = 120
+const isNonceError = (e) =>
+  e && (e.code === 'NONCE_EXPIRED' || e.code === 'REPLACEMENT_UNDERPRICED' || /nonce too low/i.test(e.message || ''))
+
+async function withSendLock(c, fn) {
+  const nonceKey = `nonce/${c.chainId}/${c.wallet.address.toLowerCase()}`
   for (let i = 0; i < 15; i++) {
     if (await acquire('lock/send', 20000)) {
-      try { return await fn() } finally { await release('lock/send') }
+      try {
+        const r = await redis()
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const chainNonce = await c.uniRead.getTransactionCount(c.wallet.address, 'pending')
+          const stored = Number(await r.get(nonceKey)) || 0
+          const nonce = Math.max(chainNonce, stored)
+          try {
+            const tx = await fn({ nonce })
+            await r.set(nonceKey, String(nonce + 1), { EX: NONCE_TTL_S })
+            return tx
+          } catch (e) {
+            if (!isNonceError(e)) throw e
+            // node said this nonce is used: skip past it and retry
+            await r.set(nonceKey, String(nonce + 1), { EX: NONCE_TTL_S })
+            await sleep(500)
+          }
+        }
+        throw httpError(409, 'Nonce conflict, retrying')
+      } finally { await release('lock/send') }
     }
     await sleep(400)
   }
   throw httpError(409, 'The relayer is busy, retrying')
 }
 
+// ---- Build everything the handlers need from runtimeConfig ----
 function context(event) {
   const rc = useRuntimeConfig(event)
   const pub = rc.public
+  const b = rc.bridge || {}
+
   const network = pub.bridgeNetwork === 'mainnet' ? 'mainnet' : 'testnet'
   const P = PRESETS[network]
+
   if (!isAddress(pub.vaultAddress || '') || !isAddress(pub.uniToken || '') || !rc.relayerPrivateKey) {
     throw httpError(500, 'Relayer is not configured')
   }
-  const ethRead = new JsonRpcProvider(env.BRIDGE_ETH_RPC || P.ethRpc, P.ethId, { staticNetwork: true })
-  const uniRead = new JsonRpcProvider(env.BRIDGE_UNI_RPC || P.uniRpc, P.uniId, { staticNetwork: true })
+  if (!rc.redisUrl) throw httpError(500, 'Redis is not configured')
+  redisUrl = rc.redisUrl
+
+  const ethRead = new JsonRpcProvider(b.ethRpc || P.ethRpc, P.ethId, { staticNetwork: true })
+  const uniRead = new JsonRpcProvider(b.uniRpc || P.uniRpc, P.uniId, { staticNetwork: true })
   const wallet = new Wallet(rc.relayerPrivateKey, uniRead)
+
   return {
     vault: pub.vaultAddress,
-    minConf: Number(env.BRIDGE_MIN_CONFIRMATIONS || (network === 'mainnet' ? 2 : 1)),
+    minConf: Number(b.minConfirmations || (network === 'mainnet' ? 2 : 1)),
+    budgetMs: Number(b.budgetMs || 8000),
+    maxAmount: parseUnits(String(b.maxAmount || '10000'), 6),
+    gasDrip: parseEther(String(b.gasDripEth || '0.00005')),
+    gasMin: parseEther(String(b.gasMinEth || '0.00002')),
+    gasCooldownMs: Number(b.gasCooldownMin || 60) * 60 * 1000,
+    chainId: P.uniId,
     ethRead, uniRead, wallet,
     token: new Contract(pub.uniToken, TOKEN_ABI, wallet),
     allowedOrigins: String(rc.allowedOrigins || '').split(',').map((s) => s.trim()).filter(Boolean),
   }
 }
 
+// Verify the transaction receipt and parse the Deposited event
 async function verifyDeposit(c, hash) {
   if (!isHexString(hash, 32)) throw httpError(400, 'Invalid transaction hash')
   const receipt = await c.ethRead.getTransactionReceipt(hash)
@@ -100,7 +138,9 @@ async function verifyDeposit(c, hash) {
           break
         }
       }
-    } catch {}
+    } catch {
+      // Skip non-matching logs
+    }
   }
 
   if (!user || amount === null) {
@@ -110,7 +150,7 @@ async function verifyDeposit(c, hash) {
   return { user, amount }
 }
 
-async function sendOnce(c, key, rec, field, deadline, sendFn) {
+async function sendOnce(c, key, rec, field, deadline, send) {
   const remaining = () => Math.max(500, deadline - Date.now())
   const prior = rec[field]
   if (prior) {
@@ -121,13 +161,7 @@ async function sendOnce(c, key, rec, field, deadline, sendFn) {
       if (pending) { await pending.wait(1, remaining()); return prior }
     }
   }
-
-  // Wrap inside the Redis send lock AND explicitly fetch the 'pending' nonce
-  const tx = await withSendLock(async () => {
-    const nonce = await c.uniRead.getTransactionCount(c.wallet.address, 'pending')
-    return await sendFn(nonce)
-  })
-
+  const tx = await withSendLock(c, send)
   rec[field] = tx.hash
   await putJSON(key, rec)
   await tx.wait(1, remaining())
@@ -145,18 +179,16 @@ async function deposit(c, claimTx) {
   }
 
   const { user, amount } = await verifyDeposit(c, hash)
-  if (amount <= BigInt(0) || amount > MAX_AMOUNT) throw httpError(400, 'Amount is outside the allowed range')
+  if (amount <= BigInt(0) || amount > c.maxAmount) throw httpError(400, 'Amount is outside the allowed range')
 
   const lockKey = `lock/${hash}`
   if (!(await acquire(lockKey, 25000))) throw httpError(409, 'This transfer is already being delivered')
 
-  const deadline = Date.now() + BUDGET_MS
+  const deadline = Date.now() + c.budgetMs
   const rec = existing || { user, amount: amount.toString(), mintTx: null, transferTx: null, status: 'processing', createdAt: Date.now() }
   try {
-    // Pass the fetched pending nonce into mintTokens and transfer
-    await sendOnce(c, key, rec, 'mintTx', deadline, (nonce) => c.token.mintTokens(amount, { nonce }))
-    await sendOnce(c, key, rec, 'transferTx', deadline, (nonce) => c.token.transfer(user, amount, { nonce }))
-    
+    await sendOnce(c, key, rec, 'mintTx', deadline, (o) => c.token.mintTokens(amount, o))
+    await sendOnce(c, key, rec, 'transferTx', deadline, (o) => c.token.transfer(user, amount, o))
     rec.status = 'done'
     rec.doneAt = Date.now()
     await putJSON(key, rec)
@@ -173,19 +205,16 @@ async function sponsorGas(c, address) {
   if (typeof address !== 'string' || !isAddress(address)) throw httpError(400, 'Invalid address')
   const addr = getAddress(address)
   const [bal, tokenBal] = await Promise.all([c.uniRead.getBalance(addr), c.token.balanceOf(addr)])
-  if (bal >= GAS_MIN) return { status: 'sufficient' }
+  if (bal >= c.gasMin) return { status: 'sufficient' }
   if (tokenBal === BigInt(0)) throw httpError(403, 'Gas is only sponsored for wallets that hold USDC on Unichain')
 
   const gasKey = `gas/${addr.toLowerCase()}`
-  if (!(await acquire(gasKey, GAS_COOLDOWN_MS))) {
+  if (!(await acquire(gasKey, c.gasCooldownMs))) {
     throw httpError(429, 'Gas was already sent to this wallet recently.')
   }
   try {
-    const tx = await withSendLock(async () => {
-      const nonce = await c.uniRead.getTransactionCount(c.wallet.address, 'pending')
-      return await c.wallet.sendTransaction({ to: addr, value: GAS_DRIP, nonce })
-    })
-    await tx.wait(1, BUDGET_MS)
+    const tx = await withSendLock(c, (o) => c.wallet.sendTransaction({ to: addr, value: c.gasDrip, ...o }))
+    await tx.wait(1, c.budgetMs)
     return { status: 'sent', hash: tx.hash }
   } catch (e) {
     await release(gasKey)

@@ -21,8 +21,8 @@ export default defineNuxtConfig({
   allowedOrigins: 'http://localhost:3000,https://ekiden.web.app', // comma-separated
 
   bridge: {
-    ethRpc: process.env.BRIDGE_ETH_RPC || '',          // empty = preset RPC
-    uniRpc: process.env.BRIDGE_UNI_RPC || '',          // empty = preset RPC
+    ethRpc: 'https://eth-mainnet.g.alchemy.com/v2/Y8ew7o5gjdFDCO698pASWL1GgPGasOmj',          // empty = preset RPC
+    uniRpc: 'https://unichain-mainnet.g.alchemy.com/v2/Y8ew7o5gjdFDCO698pASWL1GgPGasOmj',          // empty = preset RPC
     maxAmount: process.env.BRIDGE_MAX_AMOUNT || '10000',        // USDC, 6 decimals
     gasDripEth: process.env.BRIDGE_GAS_DRIP_ETH || '0.00005',
     gasMinEth: process.env.BRIDGE_GAS_MIN_ETH || '0.00002',
