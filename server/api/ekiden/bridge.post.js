@@ -12,9 +12,12 @@ const PRESETS = {
   testnet: { ethId: 11155111, ethRpc: 'https://ethereum-sepolia-rpc.publicnode.com', uniId: 1301, uniRpc: 'https://sepolia.unichain.org' },
 }
 
-// Watch for the actual Deposited event emitted by EkidenVault.sol
+// EkidenVault.sol credits a user with either deposit() -> Deposited or claim() -> Claimed.
+// The bridge now uses transfer + claim(), so Claimed is the normal case; Deposited stays
+// supported so older in-flight transfers can still be finished.
 const VAULT_IFACE = new Interface([
-  'event Deposited(address indexed user, uint256 amount)'
+  'event Deposited(address indexed user, uint256 amount)',
+  'event Claimed(address indexed user, uint256 amount)',
 ])
 const TOKEN_ABI = [
   'function balanceOf(address) view returns (uint256)',
@@ -117,7 +120,7 @@ function context(event) {
   }
 }
 
-// Verify the transaction receipt and parse the Deposited event
+// Verify the transaction receipt and parse the Claimed (or Deposited) event
 async function verifyDeposit(c, hash) {
   if (!isHexString(hash, 32)) throw httpError(400, 'Invalid transaction hash')
   const receipt = await c.ethRead.getTransactionReceipt(hash)
@@ -131,7 +134,7 @@ async function verifyDeposit(c, hash) {
   for (const log of receipt.logs) {
     try {
       const parsed = VAULT_IFACE.parseLog({ topics: log.topics, data: log.data })
-      if (parsed && parsed.name === 'Deposited') {
+      if (parsed && (parsed.name === 'Claimed' || parsed.name === 'Deposited')) {
         if (log.address.toLowerCase() === c.vault.toLowerCase()) {
           user = getAddress(parsed.args.user)
           amount = parsed.args.amount
@@ -144,7 +147,7 @@ async function verifyDeposit(c, hash) {
   }
 
   if (!user || amount === null) {
-    throw httpError(400, 'No valid Deposited event found in transaction receipt')
+    throw httpError(400, 'No valid Claimed or Deposited event found in transaction receipt')
   }
 
   return { user, amount }
