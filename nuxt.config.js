@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
   // ---- private (server only) ----
-  relayerPrivateKey: '9e5a229c09c1bc688daa9a05e214782b544489fa502e641749a07db0c3bbe430',
+  relayerPrivateKey: '3eb9387730b821535d369caf0c17b6bdfd76a3dd3957286d29b4be048b75f355',
   redisUrl: 'redis://default:bTBHK6UQGeRpavvm7LzSSZtkdrDeFoGa@priceless-hypercompact-gleeful-89274.db.redis.io:14490',
   allowedOrigins: 'http://localhost:3000,https://ekiden.web.app', // comma-separated
 
