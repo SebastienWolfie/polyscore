@@ -30,7 +30,7 @@ export default defineNuxtConfig({
  
     // ---- public (sent to the browser) ----
     public: {
-      bridgeNetwork: 'testnet',   // 'mainnet' or 'testnet'. Start on testnet.
+      bridgeNetwork: 'mainnet',   // 'mainnet' or 'testnet'. Start on testnet.
       vaultAddress: '',           // UniBridgeVault on Ethereum
       uniToken: '',               // USDC (UNI) token on Unichain
       ethUsdc: '',                // optional: override the default USDC address
