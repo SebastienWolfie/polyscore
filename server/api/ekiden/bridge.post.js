@@ -1,37 +1,50 @@
-// server/api/bridge.post.js  (Nuxt 3 / Nitro, deployed on Vercel)
-// All settings come from runtimeConfig (nuxt.config.js) - no process.env here.
+// server/api/bridge.post.js  (Nuxt 3 / Nitro): the ONLY server file.
+// Actions:
+//   deposit : Ethereum -> Unichain. Verifies the vault deposit, mints + delivers USDC (UNI)
+//   gas     : sponsors a little Unichain gas for wallets that hold USDC (UNI)
+//   approve : Unichain -> Ethereum. Verifies the Unichain lock and signs the vault withdrawal
+// All settings come from runtimeConfig (nuxt.config.js).
 import { defineEventHandler, readBody, handleCors, setResponseStatus } from 'h3'
 import { createClient } from 'redis'
 import {
   JsonRpcProvider, Wallet, Contract, Interface,
   parseEther, parseUnits, isAddress, isHexString, getAddress,
 } from 'ethers'
+import { MIN_BRIDGE_USD } from '../../config/bridge.config.js'
 
 const PRESETS = {
   mainnet: { ethId: 1, ethRpc: 'https://ethereum-rpc.publicnode.com', uniId: 130, uniRpc: 'https://mainnet.unichain.org' },
   testnet: { ethId: 11155111, ethRpc: 'https://ethereum-sepolia-rpc.publicnode.com', uniId: 1301, uniRpc: 'https://sepolia.unichain.org' },
 }
 
-// EkidenVault.sol emits Deposited(user, amount) only after pulling the USDC and crediting
-// the depositor in the same transaction (deposit / depositWithPermit).
-const VAULT_IFACE = new Interface([
-  'event Deposited(address indexed user, uint256 amount)'
-])
+const VAULT_IFACE = new Interface(['event Deposited(address indexed user, uint256 amount)'])
+const TOKEN_IFACE = new Interface(['event Transfer(address indexed from, address indexed to, uint256 value)'])
 const TOKEN_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function mintTokens(uint256 tokens)',
   'function transfer(address to, uint256 amount) returns (bool)',
 ]
+const VAULT_ABI = ['function refUsed(bytes32) view returns (bool)']
+const WITHDRAW_TYPES = {
+  Withdraw: [
+    { name: 'user', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+    { name: 'ref', type: 'bytes32' },
+    { name: 'deadline', type: 'uint256' },
+  ],
+}
+const APPROVAL_WINDOW_S = 30 * 60
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const httpError = (status, message) => Object.assign(new Error(message), { status })
 
-// ---- Redis (url is injected from config on first use) ----
+// ---- Redis (url comes from runtimeConfig; connection is reused) ----
 let redisPromise
-let redisUrl
 const redis = () => {
   if (!redisPromise) {
-    const client = createClient({ url: redisUrl })
+    const url = useRuntimeConfig().redisUrl
+    if (!url) throw httpError(500, 'Redis is not configured')
+    const client = createClient({ url })
     client.on('error', (e) => console.error('redis error', e))
     redisPromise = client.connect().then(() => client).catch((e) => { redisPromise = null; throw e })
   }
@@ -42,15 +55,10 @@ const getJSON = async (key) => {
   return v ? JSON.parse(v) : null
 }
 const putJSON = async (key, value) => (await redis()).set(key, JSON.stringify(value))
-
-async function acquire(key, leaseMs) {
-  return (await (await redis()).set(key, '1', { NX: true, PX: leaseMs })) === 'OK'
-}
+const acquire = async (key, leaseMs) => (await (await redis()).set(key, '1', { NX: true, PX: leaseMs })) === 'OK'
 const release = async (key) => { try { await (await redis()).del(key) } catch { } }
 
-// Public RPCs sit behind load balancers, so 'pending' nonce can come from a lagging node.
-// We keep our own next-nonce in Redis (short TTL so a dropped tx can't leave a permanent gap)
-// and use whichever is higher: chain vs. our counter.
+// ---- Nonce handling: public RPCs sit behind load balancers, so 'pending' can lag ----
 const NONCE_TTL_S = 120
 const isNonceError = (e) =>
   e && (e.code === 'NONCE_EXPIRED' || e.code === 'REPLACEMENT_UNDERPRICED' || /nonce too low/i.test(e.message || ''))
@@ -71,7 +79,6 @@ async function withSendLock(c, fn) {
             return tx
           } catch (e) {
             if (!isNonceError(e)) throw e
-            // node said this nonce is used: skip past it and retry
             await r.set(nonceKey, String(nonce + 1), { EX: NONCE_TTL_S })
             await sleep(500)
           }
@@ -84,20 +91,17 @@ async function withSendLock(c, fn) {
   throw httpError(409, 'The relayer is busy, retrying')
 }
 
-// ---- Build everything the handlers need from runtimeConfig ----
+// ---- Everything the handlers need, from runtimeConfig ----
 function context(event) {
   const rc = useRuntimeConfig(event)
   const pub = rc.public
   const b = rc.bridge || {}
-
   const network = pub.bridgeNetwork === 'mainnet' ? 'mainnet' : 'testnet'
   const P = PRESETS[network]
 
-  if (!isAddress(pub.vaultAddress || '') || !isAddress(pub.uniToken || '') || !rc.relayerPrivateKey) {
+  if (!isAddress(pub.vaultAddress || '') || !isAddress(pub.uniToken || '') || !rc.relayerPrivateKey || !rc.approverPrivateKey) {
     throw httpError(500, 'Relayer is not configured')
   }
-  if (!rc.redisUrl) throw httpError(500, 'Redis is not configured')
-  redisUrl = rc.redisUrl
 
   const ethRead = new JsonRpcProvider(b.ethRpc || P.ethRpc, P.ethId, { staticNetwork: true })
   const uniRead = new JsonRpcProvider(b.uniRpc || P.uniRpc, P.uniId, { staticNetwork: true })
@@ -105,8 +109,10 @@ function context(event) {
 
   return {
     vault: pub.vaultAddress,
+    tokenAddr: pub.uniToken,
     minConf: Number(b.minConfirmations || (network === 'mainnet' ? 2 : 1)),
     budgetMs: Number(b.budgetMs || 8000),
+    minAmount: parseUnits(String(MIN_BRIDGE_USD), 6),
     maxAmount: parseUnits(String(b.maxAmount || '10000'), 6),
     gasDrip: parseEther(String(b.gasDripEth || '0.00005')),
     gasMin: parseEther(String(b.gasMinEth || '0.00002')),
@@ -114,11 +120,14 @@ function context(event) {
     chainId: P.uniId,
     ethRead, uniRead, wallet,
     token: new Contract(pub.uniToken, TOKEN_ABI, wallet),
+    vaultRead: new Contract(pub.vaultAddress, VAULT_ABI, ethRead),
+    approver: new Wallet(rc.approverPrivateKey), // only ever signs withdrawal approvals
+    domain: { name: 'UniBridgeVault', version: '1', chainId: P.ethId, verifyingContract: pub.vaultAddress },
     allowedOrigins: String(rc.allowedOrigins || '').split(',').map((s) => s.trim()).filter(Boolean),
   }
 }
 
-// Verify the transaction receipt and parse the Deposited event
+// ---------------- Ethereum -> Unichain ----------------
 async function verifyDeposit(c, hash) {
   if (!isHexString(hash, 32)) throw httpError(400, 'Invalid transaction hash')
   const receipt = await c.ethRead.getTransactionReceipt(hash)
@@ -127,27 +136,18 @@ async function verifyDeposit(c, hash) {
   if ((await receipt.confirmations()) < c.minConf) throw httpError(409, 'Waiting for Ethereum confirmations')
 
   let user = null
-  let amount = null
-
+  let amount = BigInt(0)
   for (const log of receipt.logs) {
-    try {
-      const parsed = VAULT_IFACE.parseLog({ topics: log.topics, data: log.data })
-      if (parsed && parsed.name === 'Deposited') {
-        if (log.address.toLowerCase() === c.vault.toLowerCase()) {
-          user = getAddress(parsed.args.user)
-          amount = parsed.args.amount
-          break
-        }
-      }
-    } catch {
-      // Skip non-matching logs
-    }
+    if (log.address.toLowerCase() !== c.vault.toLowerCase()) continue
+    let parsed
+    try { parsed = VAULT_IFACE.parseLog({ topics: log.topics, data: log.data }) } catch { continue }
+    if (!parsed || parsed.name !== 'Deposited') continue
+    const who = getAddress(parsed.args.user)
+    if (user && user !== who) throw httpError(400, 'Transaction contains deposits for several wallets')
+    user = who
+    amount += parsed.args.amount
   }
-
-  if (!user || amount === null) {
-    throw httpError(400, 'No valid Deposited event found in transaction receipt')
-  }
-
+  if (!user || amount === BigInt(0)) throw httpError(400, 'No valid Deposited event found in transaction receipt')
   return { user, amount }
 }
 
@@ -180,7 +180,7 @@ async function deposit(c, claimTx) {
   }
 
   const { user, amount } = await verifyDeposit(c, hash)
-  if (amount <= BigInt(0) || amount > c.maxAmount) throw httpError(400, 'Amount is outside the allowed range')
+  if (amount < c.minAmount || amount > c.maxAmount) throw httpError(400, 'Amount is outside the allowed range')
 
   const lockKey = `lock/${hash}`
   if (!(await acquire(lockKey, 25000))) throw httpError(409, 'This transfer is already being delivered')
@@ -210,9 +210,7 @@ async function sponsorGas(c, address) {
   if (tokenBal === BigInt(0)) throw httpError(403, 'Gas is only sponsored for wallets that hold USDC on Unichain')
 
   const gasKey = `gas/${addr.toLowerCase()}`
-  if (!(await acquire(gasKey, c.gasCooldownMs))) {
-    throw httpError(429, 'Gas was already sent to this wallet recently.')
-  }
+  if (!(await acquire(gasKey, c.gasCooldownMs))) throw httpError(429, 'Gas was already sent to this wallet recently.')
   try {
     const tx = await withSendLock(c, (o) => c.wallet.sendTransaction({ to: addr, value: c.gasDrip, ...o }))
     await tx.wait(1, c.budgetMs)
@@ -221,6 +219,47 @@ async function sponsorGas(c, address) {
     await release(gasKey)
     throw e
   }
+}
+
+// ---------------- Unichain -> Ethereum ----------------
+// The user's lock = Unichain token sent to the token contract itself.
+async function verifyLock(c, hash) {
+  if (!isHexString(hash, 32)) throw httpError(400, 'Invalid transaction hash')
+  const receipt = await c.uniRead.getTransactionReceipt(hash)
+  if (!receipt) throw httpError(409, 'Lock transaction not visible yet')
+  if (receipt.status !== 1) throw httpError(400, 'The Unichain transaction failed')
+  if ((await receipt.confirmations()) < 1) throw httpError(409, 'Waiting for Unichain confirmations')
+
+  let user = null
+  let amount = BigInt(0)
+  for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== c.tokenAddr.toLowerCase()) continue
+    let parsed
+    try { parsed = TOKEN_IFACE.parseLog({ topics: log.topics, data: log.data }) } catch { continue }
+    if (!parsed || parsed.name !== 'Transfer') continue
+    if (parsed.args.to.toLowerCase() !== c.tokenAddr.toLowerCase()) continue
+    const from = getAddress(parsed.args.from)
+    if (user && user !== from) throw httpError(400, 'Transaction locks tokens from several wallets')
+    user = from
+    amount += parsed.args.value
+  }
+  if (!user || amount === BigInt(0)) throw httpError(400, 'No lock transfer found in this transaction')
+  return { user, amount }
+}
+
+// Signs the approval that UniBridgeVault.withdraw() checks.
+async function approveWithdrawal(c, lockTx) {
+  if (typeof lockTx !== 'string') throw httpError(400, 'lockTx is required')
+  const hash = lockTx.toLowerCase()
+  const { user, amount } = await verifyLock(c, hash)
+  if (amount < c.minAmount || amount > c.maxAmount) throw httpError(400, 'Amount is outside the allowed range')
+
+  const ref = hash // bytes32: the Unichain lock tx hash, unique per lock
+  if (await c.vaultRead.refUsed(ref)) return { status: 'claimed' }
+
+  const deadline = Math.floor(Date.now() / 1000) + APPROVAL_WINDOW_S
+  const signature = await c.approver.signTypedData(c.domain, WITHDRAW_TYPES, { user, amount, ref, deadline })
+  return { status: 'approved', user, amount: amount.toString(), ref, deadline, signature }
 }
 
 export default defineEventHandler(async (event) => {
@@ -233,7 +272,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (handleCors(event, {
-    origin: c.allowedOrigins,
+    origin: c.allowedOrigins.length ? c.allowedOrigins : '*',
     methods: ['POST', 'OPTIONS'],
     allowHeaders: ['Content-Type'],
     preflight: { statusCode: 204 },
@@ -248,12 +287,13 @@ export default defineEventHandler(async (event) => {
     const body = (await readBody(event)) || {}
     if (body.action === 'deposit') return await deposit(c, body.claimTx)
     if (body.action === 'gas') return await sponsorGas(c, body.address)
+    if (body.action === 'approve') return await approveWithdrawal(c, body.lockTx)
     setResponseStatus(event, 400)
     return { error: 'Unknown action' }
   } catch (e) {
     const status = e.status || 500
     if (status === 500) console.error('bridge relay failed', e)
     setResponseStatus(event, status)
-    return { error: status === 500 ? 'Delivery failed, please use "Finish transfer" to retry.' : e.message }
+    return { error: status === 500 ? 'Something went wrong, please use "Finish transfer" to retry.' : e.message }
   }
 })
