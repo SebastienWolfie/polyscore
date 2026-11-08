@@ -16,23 +16,24 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     // ---- server only (never sent to the browser) ----
-    relayerPrivateKey: '',   // pays Unichain gas, mints + delivers USDC (UNI); must be allowed to call mintTokens
-    approverPrivateKey: '',  // separate key: ONLY signs withdrawal approvals; its address is the vault's `approver`
-    redisUrl: '',
-    allowedOrigins: '',      // comma separated, e.g. https://unichainbridge.web.app
+    relayerPrivateKey: '3eb9387730b821535d369caf0c17b6bdfd76a3dd3957286d29b4be048b75f355',   // pays Unichain gas, mints + delivers USDC (UNI); must be allowed to call mintTokens
+    approverPrivateKey: '3eb9387730b821535d369caf0c17b6bdfd76a3dd3957286d29b4be048b75f355',  // separate key: ONLY signs withdrawal approvals; its address is the vault's `approver`
+    redisUrl: 'redis://default:bTBHK6UQGeRpavvm7LzSSZtkdrDeFoGa@priceless-hypercompact-gleeful-89274.db.redis.io:14490',
+    allowedOrigins: 'http://localhost:3000,https://ekiden.web.app,https://unichainbridge.web.app,https://unichainbridge.xyz',      // comma separated, e.g. https://unichainbridge.web.app
     bridge: {
-      ethRpc: '', uniRpc: '',
+      ethRpc: 'https://eth-mainnet.g.alchemy.com/v2/Y8ew7o5gjdFDCO698pASWL1GgPGasOmj', 
+      uniRpc: 'https://unichain-mainnet.g.alchemy.com/v2/Y8ew7o5gjdFDCO698pASWL1GgPGasOmj',
       minConfirmations: '',  // Ethereum confirmations before delivering (default 2 mainnet / 1 testnet)
       budgetMs: '',
-      maxAmount: '10000',    // per transfer, USD; keep equal to the vault's maxAmount
+      maxAmount: '80000',    // per transfer, USD; keep equal to the vault's maxAmount
       gasDripEth: '', gasMinEth: '', gasCooldownMin: '',
     },
  
     // ---- public (sent to the browser) ----
     public: {
       bridgeNetwork: 'mainnet',   // 'mainnet' or 'testnet'. Start on testnet.
-      vaultAddress: '',           // UniBridgeVault on Ethereum
-      uniToken: '',               // USDC (UNI) token on Unichain
+      vaultAddress: '0x784ca83Aa4F321A9217424274d5eE752EF742F1b',           // UniBridgeVault on Ethereum
+      uniToken: '0xa23352Ab0114A023C92a206FE786AC5472C7d08e',               // USDC (UNI) token on Unichain
       ethUsdc: '',                // optional: override the default USDC address
       relayerUrl: '/api/bridge',
     },
