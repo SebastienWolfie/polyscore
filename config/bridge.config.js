@@ -17,3 +17,16 @@ export const KYC_MAX_USD = 100
 
 // Shown in the KYC message.
 export const KYC_REVIEW_HOURS = 48
+
+// ---------------------------------------------------------------------------
+// Receiving-address authorisation. When someone sends to an address other than the
+// one that made the transfer, the sender signs one of these free messages so the
+// relayer knows the destination was really chosen by them (nobody else can redirect it).
+// Shared so the browser and the server build the identical text.
+// `recipient` must be the checksummed address.
+// ---------------------------------------------------------------------------
+export const deliveryMessage = (depositTx, recipient) =>
+  ['Unibridge delivery', 'Network: Unichain', `Deposit tx: ${depositTx.toLowerCase()}`, `Recipient: ${recipient}`].join('\n')
+
+export const payoutMessage = (lockTx, recipient) =>
+  ['Unibridge payout', 'Network: Ethereum', `Lock tx: ${lockTx.toLowerCase()}`, `Recipient: ${recipient}`].join('\n')

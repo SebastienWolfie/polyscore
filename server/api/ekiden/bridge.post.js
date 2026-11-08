@@ -1,33 +1,40 @@
 // server/api/bridge.post.js  (Nuxt 3 / Nitro): the ONLY server file.
 // Actions:
-//   deposit : Ethereum -> Unichain. Verifies the vault deposit, mints + delivers USDC (UNI)
+//   deposit : Ethereum -> Unichain. The user sent USDC straight to the vault (plain transfer).
+//             Reads that transfer, mints + delivers USDC (UNI) and credits the receiving address.
 //   gas     : sponsors a little Unichain gas for wallets that hold USDC (UNI)
-//   approve : Unichain -> Ethereum. Verifies the Unichain lock and signs the vault withdrawal
+//   approve : Unichain -> Ethereum. Verifies the Unichain lock, takes the amount off the
+//             sender's credit, and signs the vault withdrawal
+//   credit  : how much an address can still withdraw (its deposits minus its withdrawals)
+// Both deposit and approve accept an optional `recipient` (a different receiving address).
+// It is only honoured when the original sender signed it (see config/bridge.config.js).
 // All settings come from runtimeConfig (nuxt.config.js).
 import { defineEventHandler, readBody, handleCors, setResponseStatus } from 'h3'
 import { createClient } from 'redis'
 import {
-  JsonRpcProvider, Wallet, Contract, Interface,
-  parseEther, parseUnits, isAddress, isHexString, getAddress,
+  JsonRpcProvider, Wallet, Contract, Interface, ZeroAddress, verifyMessage,
+  parseEther, parseUnits, formatUnits, isAddress, isHexString, getAddress,
 } from 'ethers'
-import { MIN_BRIDGE_USD } from '../../config/bridge.config.js'
+import { MIN_BRIDGE_USD, deliveryMessage, payoutMessage } from '../../config/bridge.config.js'
 
 const PRESETS = {
-  mainnet: { ethId: 1, ethRpc: 'https://ethereum-rpc.publicnode.com', uniId: 130, uniRpc: 'https://mainnet.unichain.org' },
-  testnet: { ethId: 11155111, ethRpc: 'https://ethereum-sepolia-rpc.publicnode.com', uniId: 1301, uniRpc: 'https://sepolia.unichain.org' },
+  mainnet: { ethId: 1, ethUsdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', ethRpc: 'https://ethereum-rpc.publicnode.com', uniId: 130, uniRpc: 'https://mainnet.unichain.org' },
+  testnet: { ethId: 11155111, ethUsdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', ethRpc: 'https://ethereum-sepolia-rpc.publicnode.com', uniId: 1301, uniRpc: 'https://sepolia.unichain.org' },
 }
 
-const VAULT_IFACE = new Interface(['event Deposited(address indexed user, uint256 amount)'])
 const TOKEN_IFACE = new Interface(['event Transfer(address indexed from, address indexed to, uint256 value)'])
 const TOKEN_ABI = [
   'function balanceOf(address) view returns (uint256)',
   'function mintTokens(uint256 tokens)',
   'function transfer(address to, uint256 amount) returns (bool)',
 ]
-const VAULT_ABI = ['function refUsed(bytes32) view returns (bool)']
+const VAULT_ABI = [
+  'function refUsed(bytes32) view returns (bool)',
+  'function paused() view returns (bool)',
+]
 const WITHDRAW_TYPES = {
   Withdraw: [
-    { name: 'user', type: 'address' },
+    { name: 'recipient', type: 'address' },
     { name: 'amount', type: 'uint256' },
     { name: 'ref', type: 'bytes32' },
     { name: 'deadline', type: 'uint256' },
@@ -57,6 +64,32 @@ const getJSON = async (key) => {
 const putJSON = async (key, value) => (await redis()).set(key, JSON.stringify(value))
 const acquire = async (key, leaseMs) => (await (await redis()).set(key, '1', { NX: true, PX: leaseMs })) === 'OK'
 const release = async (key) => { try { await (await redis()).del(key) } catch { } }
+
+// ---- Credit ledger (per address, in USDC base units) ----
+// Credit follows the address that RECEIVED the USDC (UNI) on Unichain. An address can only
+// withdraw what it was credited, so the vault can never be drained by someone who did not
+// deposit. Both scripts run atomically inside Redis.
+const creditKey = (addr) => `credit/${addr.toLowerCase()}`
+const CREDIT_ONCE = `
+if redis.call('SET', KEYS[1], '1', 'NX') then
+  redis.call('INCRBY', KEYS[2], ARGV[1])
+  return 1
+end
+return 0`
+const DEBIT = `
+local c = tonumber(redis.call('GET', KEYS[1]) or '0')
+local a = tonumber(ARGV[1])
+if c >= a then
+  redis.call('DECRBY', KEYS[1], a)
+  return 1
+end
+return 0`
+// Adds credit once per deposit tx (the guard key makes a repeat do nothing).
+const creditOnce = async (guardKey, addr, amount) =>
+  (await (await redis()).eval(CREDIT_ONCE, { keys: [guardKey, creditKey(addr)], arguments: [amount.toString()] })) === 1
+const debit = async (addr, amount) =>
+  (await (await redis()).eval(DEBIT, { keys: [creditKey(addr)], arguments: [amount.toString()] })) === 1
+const creditOf = async (addr) => BigInt((await (await redis()).get(creditKey(addr))) || '0')
 
 // ---- Nonce handling: public RPCs sit behind load balancers, so 'pending' can lag ----
 const NONCE_TTL_S = 120
@@ -110,6 +143,7 @@ function context(event) {
   return {
     vault: pub.vaultAddress,
     tokenAddr: pub.uniToken,
+    ethUsdc: isAddress(pub.ethUsdc || '') ? pub.ethUsdc : P.ethUsdc,
     minConf: Number(b.minConfirmations || (network === 'mainnet' ? 2 : 1)),
     budgetMs: Number(b.budgetMs || 8000),
     minAmount: parseUnits(String(MIN_BRIDGE_USD), 6),
@@ -127,7 +161,25 @@ function context(event) {
   }
 }
 
+// Who gets the funds. Default is the sender. A different address is accepted only if
+// the sender signed it, so nobody who merely sees the transaction can redirect the money.
+function resolveRecipient(c, sender, recipient, authSig, makeMessage) {
+  if (recipient == null || recipient === '') return sender
+  if (typeof recipient !== 'string' || !isAddress(recipient)) throw httpError(400, 'Invalid receiving address')
+  const to = getAddress(recipient)
+  if (to === sender) return sender
+  const blocked = [ZeroAddress, c.tokenAddr, c.vault].map((a) => a.toLowerCase())
+  if (blocked.includes(to.toLowerCase())) throw httpError(400, 'This address cannot receive funds')
+  let signer = null
+  try { signer = verifyMessage(makeMessage(to), String(authSig)) } catch { /* bad signature */ }
+  if (signer !== sender) throw httpError(400, 'The receiving address was not authorised by the sender')
+  return to
+}
+
 // ---------------- Ethereum -> Unichain ----------------
+// A deposit is a plain USDC transfer to the vault. Read it from the receipt: the USDC
+// contract's Transfer(from, vault, value) events. The sender is `from`, so only the sender
+// can ever be credited, whoever presents the transaction hash.
 async function verifyDeposit(c, hash) {
   if (!isHexString(hash, 32)) throw httpError(400, 'Invalid transaction hash')
   const receipt = await c.ethRead.getTransactionReceipt(hash)
@@ -138,16 +190,18 @@ async function verifyDeposit(c, hash) {
   let user = null
   let amount = BigInt(0)
   for (const log of receipt.logs) {
-    if (log.address.toLowerCase() !== c.vault.toLowerCase()) continue
+    if (log.address.toLowerCase() !== c.ethUsdc.toLowerCase()) continue
     let parsed
-    try { parsed = VAULT_IFACE.parseLog({ topics: log.topics, data: log.data }) } catch { continue }
-    if (!parsed || parsed.name !== 'Deposited') continue
-    const who = getAddress(parsed.args.user)
-    if (user && user !== who) throw httpError(400, 'Transaction contains deposits for several wallets')
+    try { parsed = TOKEN_IFACE.parseLog({ topics: log.topics, data: log.data }) } catch { continue }
+    if (!parsed || parsed.name !== 'Transfer') continue
+    if (parsed.args.to.toLowerCase() !== c.vault.toLowerCase()) continue
+    if (parsed.args.from.toLowerCase() === c.vault.toLowerCase()) continue
+    const who = getAddress(parsed.args.from)
+    if (user && user !== who) throw httpError(400, 'Transaction sends USDC to the vault from several wallets')
     user = who
-    amount += parsed.args.amount
+    amount += parsed.args.value // sum every transfer in the tx so none is left uncredited
   }
-  if (!user || amount === BigInt(0)) throw httpError(400, 'No valid Deposited event found in transaction receipt')
+  if (!user || amount === BigInt(0)) throw httpError(400, 'No USDC transfer to the vault found in this transaction')
   return { user, amount }
 }
 
@@ -169,31 +223,39 @@ async function sendOnce(c, key, rec, field, deadline, send) {
   return tx.hash
 }
 
-async function deposit(c, claimTx) {
+async function deposit(c, claimTx, recipient, authSig) {
   if (typeof claimTx !== 'string') throw httpError(400, 'claimTx is required')
   const hash = claimTx.toLowerCase()
   const key = `deposit/${hash}`
 
   const existing = await getJSON(key)
   if (existing && existing.status === 'done') {
-    return { status: 'done', mintTx: existing.mintTx, transferTx: existing.transferTx }
+    return { status: 'done', mintTx: existing.mintTx, transferTx: existing.transferTx, to: existing.to || existing.user }
   }
 
   const { user, amount } = await verifyDeposit(c, hash)
-  if (amount < c.minAmount || amount > c.maxAmount) throw httpError(400, 'Amount is outside the allowed range')
+  // The $1 minimum is enforced by the site; here anything positive up to the max is delivered
+  // so a small direct transfer is never left stuck.
+  if (amount > c.maxAmount) throw httpError(400, 'Amount is above the maximum')
+  if (await c.vaultRead.paused()) throw httpError(503, 'The bridge is paused')
 
   const lockKey = `lock/${hash}`
   if (!(await acquire(lockKey, 25000))) throw httpError(409, 'This transfer is already being delivered')
 
+  // Once a delivery has started, its destination is fixed.
+  const to = existing?.to || resolveRecipient(c, user, recipient, authSig, (r) => deliveryMessage(hash, r))
   const deadline = Date.now() + c.budgetMs
-  const rec = existing || { user, amount: amount.toString(), mintTx: null, transferTx: null, status: 'processing', createdAt: Date.now() }
+  const rec = existing || { user, to, amount: amount.toString(), mintTx: null, transferTx: null, status: 'processing', createdAt: Date.now() }
+  rec.to = rec.to || to
   try {
     await sendOnce(c, key, rec, 'mintTx', deadline, (o) => c.token.mintTokens(amount, o))
-    await sendOnce(c, key, rec, 'transferTx', deadline, (o) => c.token.transfer(user, amount, o))
+    await sendOnce(c, key, rec, 'transferTx', deadline, (o) => c.token.transfer(rec.to, amount, o))
+    // Credit exactly once per deposit tx: this is what the receiving address may withdraw later.
+    await creditOnce(`credited/${hash}`, rec.to, amount)
     rec.status = 'done'
     rec.doneAt = Date.now()
     await putJSON(key, rec)
-    return { status: 'done', mintTx: rec.mintTx, transferTx: rec.transferTx }
+    return { status: 'done', mintTx: rec.mintTx, transferTx: rec.transferTx, to: rec.to }
   } catch (e) {
     if (e && e.code === 'TIMEOUT') return { status: 'pending' }
     throw e
@@ -247,8 +309,14 @@ async function verifyLock(c, hash) {
   return { user, amount }
 }
 
+// How much this address can still withdraw (USDC base units, as a string).
+async function creditAction(address) {
+  if (typeof address !== 'string' || !isAddress(address)) throw httpError(400, 'Invalid address')
+  return { available: (await creditOf(getAddress(address))).toString() }
+}
+
 // Signs the approval that UniBridgeVault.withdraw() checks.
-async function approveWithdrawal(c, lockTx) {
+async function approveWithdrawal(c, lockTx, recipient, authSig) {
   if (typeof lockTx !== 'string') throw httpError(400, 'lockTx is required')
   const hash = lockTx.toLowerCase()
   const { user, amount } = await verifyLock(c, hash)
@@ -257,9 +325,28 @@ async function approveWithdrawal(c, lockTx) {
   const ref = hash // bytes32: the Unichain lock tx hash, unique per lock
   if (await c.vaultRead.refUsed(ref)) return { status: 'claimed' }
 
+  const to = resolveRecipient(c, user, recipient, authSig, (r) => payoutMessage(hash, r))
+
+  // Only what this address deposited can be withdrawn. The first approval of a lock takes the
+  // amount off its credit; asking again for the same lock (retry) does not charge twice.
+  const approvedKey = `approved/${hash}`
+  const prior = await getJSON(approvedKey)
+  if (prior && prior.status === 'pending') throw httpError(409, 'Approval is being prepared, retrying')
+  if (!prior) {
+    if (!(await (await redis()).set(approvedKey, JSON.stringify({ status: 'pending' }), { NX: true, EX: 60 }))) {
+      throw httpError(409, 'Approval is being prepared, retrying')
+    }
+    if (!(await debit(user, amount))) {
+      await release(approvedKey)
+      const left = await creditOf(user)
+      throw httpError(403, `This wallet can only withdraw what it deposited. Available: ${formatUnits(left, 6)} USDC.`)
+    }
+    await putJSON(approvedKey, { status: 'ok', user, amount: amount.toString(), at: Date.now() })
+  }
+
   const deadline = Math.floor(Date.now() / 1000) + APPROVAL_WINDOW_S
-  const signature = await c.approver.signTypedData(c.domain, WITHDRAW_TYPES, { user, amount, ref, deadline })
-  return { status: 'approved', user, amount: amount.toString(), ref, deadline, signature }
+  const signature = await c.approver.signTypedData(c.domain, WITHDRAW_TYPES, { recipient: to, amount, ref, deadline })
+  return { status: 'approved', recipient: to, amount: amount.toString(), ref, deadline, signature }
 }
 
 export default defineEventHandler(async (event) => {
@@ -285,9 +372,10 @@ export default defineEventHandler(async (event) => {
 
   try {
     const body = (await readBody(event)) || {}
-    if (body.action === 'deposit') return await deposit(c, body.claimTx)
+    if (body.action === 'deposit') return await deposit(c, body.claimTx, body.recipient, body.authSig)
     if (body.action === 'gas') return await sponsorGas(c, body.address)
-    if (body.action === 'approve') return await approveWithdrawal(c, body.lockTx)
+    if (body.action === 'credit') return await creditAction(body.address)
+    if (body.action === 'approve') return await approveWithdrawal(c, body.lockTx, body.recipient, body.authSig)
     setResponseStatus(event, 400)
     return { error: 'Unknown action' }
   } catch (e) {
