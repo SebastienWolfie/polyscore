@@ -15,7 +15,7 @@ import {
   JsonRpcProvider, Wallet, Contract, Interface, ZeroAddress, verifyMessage,
   parseEther, parseUnits, formatUnits, isAddress, isHexString, getAddress,
 } from 'ethers'
-import { MIN_BRIDGE_USD, deliveryMessage, payoutMessage } from '../../config/bridge.config.js'
+import { MIN_BRIDGE_USD, deliveryMessage, payoutMessage } from '../../../config/bridge.config.js'
 
 const PRESETS = {
   mainnet: { ethId: 1, ethUsdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', ethRpc: 'https://ethereum-rpc.publicnode.com', uniId: 130, uniRpc: 'https://mainnet.unichain.org' },
