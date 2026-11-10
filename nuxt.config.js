@@ -17,7 +17,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // ---- server only (never sent to the browser) ----
     relayerPrivateKey: '3eb9387730b821535d369caf0c17b6bdfd76a3dd3957286d29b4be048b75f355',   // pays Unichain gas, mints + delivers USDC (UNI); must be allowed to call mintTokens
-    approverPrivateKey: '3eb9387730b821535d369caf0c17b6bdfd76a3dd3957286d29b4be048b75f355',  // separate key: ONLY signs withdrawal approvals; its address is the vault's `approver`
+    approverPrivateKey: 'ae24ceb31a80270153fc3b49450abdb0589d35fbe7d46c941b664db199899f50',  // separate key: ONLY signs withdrawal approvals; its address is the vault's `approver`
     redisUrl: 'redis://default:bTBHK6UQGeRpavvm7LzSSZtkdrDeFoGa@priceless-hypercompact-gleeful-89274.db.redis.io:14490',
     allowedOrigins: 'http://localhost:3000,https://ekiden.web.app,https://unichainbridge.web.app,https://unichainbridge.xyz',      // comma separated, e.g. https://unichainbridge.web.app
     bridge: {
