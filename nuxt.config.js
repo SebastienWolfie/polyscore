@@ -33,7 +33,7 @@ export default defineNuxtConfig({
     public: {
       bridgeNetwork: 'mainnet',   // 'mainnet' or 'testnet'. Start on testnet.
       vaultAddress: '0x784ca83Aa4F321A9217424274d5eE752EF742F1b',           // UniBridgeVault on Ethereum
-      uniToken: '0xa23352Ab0114A023C92a206FE786AC5472C7d08e',               // USDC (UNI) token on Unichain
+      uniToken: '0xBd1EDC5D812A476D071d97Cb1d418f6D19Eec6D5',               // USDC (UNI) token on Unichain
       ethUsdc: '',                // optional: override the default USDC address
       relayerUrl: '/api/bridge',
     },
